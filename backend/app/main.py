@@ -1,7 +1,19 @@
-﻿from fastapi import FastAPI
+﻿import os
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers.portfolio import router as portfolio_router
+
+
+def parse_allowed_origins() -> list[str]:
+    raw_origins = os.getenv("FRONTEND_ORIGINS", "")
+    origins = [origin.strip().rstrip("/") for origin in raw_origins.split(",") if origin.strip()]
+    defaults = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ]
+    return list(dict.fromkeys(defaults + origins))
 
 
 app = FastAPI(
@@ -12,13 +24,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://doublerock.io",
-        "https://portsigma-hm3qus1jr-golbang2s-projects.vercel.app/",  # 실제 vercel 주소로 바꿔라
-        "https://portsigma.vercel.app/"
-    ],
+    allow_origins=parse_allowed_origins(),
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?$|https://.*\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
