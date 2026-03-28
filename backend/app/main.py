@@ -14,9 +14,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "http://127.0.0.1:3000"
+        "http://127.0.0.1:3000",
+        "https://doublerock.io",
+        "https://portsigma-hm3qus1jr-golbang2s-projects.vercel.app/",  # 실제 vercel 주소로 바꿔라
     ],
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
