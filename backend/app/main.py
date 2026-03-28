@@ -17,6 +17,7 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "https://doublerock.io",
         "https://portsigma-hm3qus1jr-golbang2s-projects.vercel.app/",  # 실제 vercel 주소로 바꿔라
+        "https://portsigma.vercel.app/"
     ],
     allow_credentials=True,
     allow_methods=["*"],
