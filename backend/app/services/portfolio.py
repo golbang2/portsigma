@@ -1,16 +1,42 @@
 ﻿from __future__ import annotations
 
+from dataclasses import dataclass
 from io import StringIO
 
 import pandas as pd
 
 from app.analytics.dcc import calculate_dcc_correlation_matrix
-from app.analytics.garch import calculate_garch_volatility
-from app.schemas.portfolio import AnalyzePortfolioRequest, AnalyzePortfolioResponse, AssetReport
+from app.analytics.garch import calculate_garch_volatility, calculate_garch_volatility_series
+from app.schemas.portfolio import (
+    AnalyzePortfolioRequest,
+    AnalyzePortfolioResponse,
+    AssetReport,
+    RiskStrategyRequest,
+    RiskStrategyResponse,
+)
 from app.services.market_data import fetch_fx_series, fetch_yahoo_prices
 
 
 Z_SCORE_95_LEFT_TAIL = -1.6448536269514722
+MAJOR_INDEX_FACTORS: dict[str, tuple[str, str]] = {
+    "sp500": ("S&P 500", "^GSPC"),
+    "nasdaq100": ("NASDAQ 100", "^NDX"),
+    "nikkei225": ("Nikkei 225", "^N225"),
+    "ftse100": ("FTSE 100", "^FTSE"),
+    "dax": ("DAX", "^GDAXI"),
+    "cac40": ("CAC 40", "^FCHI"),
+    "kospi": ("KOSPI", "^KS11"),
+}
+
+
+@dataclass
+class PortfolioContext:
+    report_currency: str
+    asset_frame: pd.DataFrame
+    report_prices: pd.DataFrame
+    returns: pd.DataFrame
+    portfolio_returns: pd.Series
+    warnings: list[str]
 
 
 def parse_asset_price_csv(csv_text: str) -> pd.DataFrame:
@@ -64,10 +90,24 @@ def normalize_prices(price_matrix: pd.DataFrame) -> pd.DataFrame:
     return price_matrix.apply(lambda col: col / col.dropna().iloc[0] if col.dropna().any() else col)
 
 
+def build_drawdown_series(portfolio_returns: pd.Series) -> tuple[pd.DataFrame, float | None]:
+    cleaned = portfolio_returns.dropna()
+    if cleaned.empty:
+        return pd.DataFrame(columns=["drawdown"]), None
+
+    cumulative = (1 + cleaned).cumprod()
+    running_peak = cumulative.cummax()
+    drawdown = cumulative / running_peak - 1
+    frame = drawdown.to_frame(name="drawdown")
+    max_drawdown = float(drawdown.min()) if not drawdown.empty else None
+    return frame, max_drawdown
+
+
 def serialize_time_series(frame: pd.DataFrame, round_digits: int = 6) -> list[dict[str, float | str]]:
-    serializable = frame.reset_index().rename(columns={"index": "date"})
+    serializable = frame.reset_index()
     first_column = serializable.columns[0]
-    serializable[first_column] = pd.to_datetime(serializable[first_column]).dt.strftime("%Y-%m-%d")
+    serializable = serializable.rename(columns={first_column: "date"})
+    serializable["date"] = pd.to_datetime(serializable["date"]).dt.strftime("%Y-%m-%d")
     return serializable.round(round_digits).fillna("").to_dict(orient="records")
 
 
@@ -76,7 +116,9 @@ def serialize_correlation(frame: pd.DataFrame) -> list[dict[str, float | str]]:
     return melted.round(6).fillna("").to_dict(orient="records")
 
 
-def calculate_parametric_var_95(portfolio_returns: pd.Series, market_value: float) -> tuple[float | None, float | None, float | None, float | None, float | None]:
+def calculate_parametric_var_95(
+    portfolio_returns: pd.Series, market_value: float
+) -> tuple[float | None, float | None, float | None, float | None, float | None]:
     cleaned = portfolio_returns.dropna()
     if cleaned.empty:
         return None, None, None, None, None
@@ -89,7 +131,7 @@ def calculate_parametric_var_95(portfolio_returns: pd.Series, market_value: floa
     return var_return, var_amount, mean_return, std_return, threshold_return
 
 
-def analyze_portfolio(payload: AnalyzePortfolioRequest) -> AnalyzePortfolioResponse:
+def build_portfolio_context(payload: AnalyzePortfolioRequest | RiskStrategyRequest) -> PortfolioContext:
     report_currency = payload.report_currency.upper()
     local_series_map: dict[str, pd.Series] = {}
     converted_series_map: dict[str, pd.Series] = {}
@@ -100,9 +142,10 @@ def analyze_portfolio(payload: AnalyzePortfolioRequest) -> AnalyzePortfolioRespo
         try:
             prices, price_currency = load_asset_data(asset.source_type, asset.ticker, asset.csv_text, payload.period)
             series = prices.set_index("Date")["price"].sort_index()
+            effective_price_currency = (price_currency or report_currency).upper()
             converted_series, market_fx_rate = convert_series_to_currency(
                 series,
-                price_currency or report_currency,
+                effective_price_currency,
                 report_currency,
                 payload.period,
             )
@@ -120,7 +163,7 @@ def analyze_portfolio(payload: AnalyzePortfolioRequest) -> AnalyzePortfolioRespo
                     "purchase_price": asset.purchase_price,
                     "purchase_currency": asset.purchase_currency.upper(),
                     "quantity": asset.quantity,
-                    "price_currency": price_currency or report_currency,
+                    "price_currency": effective_price_currency,
                     "cost_basis_original": asset.purchase_price * asset.quantity,
                     "cost_basis_report": converted_cost_basis,
                     "purchase_fx_rate": purchase_fx_rate,
@@ -149,20 +192,89 @@ def analyze_portfolio(payload: AnalyzePortfolioRequest) -> AnalyzePortfolioRespo
     asset_frame["market_weight_report"] = asset_frame["market_value_report"] / asset_frame["market_value_report"].sum()
 
     returns = report_prices.pct_change().dropna(how="all")
-    correlation = calculate_dcc_correlation_matrix(returns).fillna(0.0)
-    garch_vol = returns.apply(calculate_garch_volatility)
     weight_series = asset_frame.set_index("asset")["market_weight_report"].reindex(returns.columns).fillna(0.0)
     portfolio_returns = returns.mul(weight_series, axis=1).sum(axis=1)
-    portfolio_vol = calculate_garch_volatility(portfolio_returns)
-    var_95_return, var_95_amount, var_mean_return, var_std_return, var_95_cutoff_return = calculate_parametric_var_95(
-        portfolio_returns,
-        float(asset_frame["market_value_report"].sum()),
+
+    return PortfolioContext(
+        report_currency=report_currency,
+        asset_frame=asset_frame,
+        report_prices=report_prices,
+        returns=returns,
+        portfolio_returns=portfolio_returns,
+        warnings=warnings,
     )
-    asset_frame["garch_volatility"] = asset_frame["asset"].map(garch_vol)
+
+
+def build_factor_series(payload: RiskStrategyRequest, context: PortfolioContext) -> pd.Series:
+    if payload.factor_type == "asset":
+        if payload.factor_id not in context.report_prices.columns:
+            raise ValueError("Selected asset factor could not be found in the analyzed portfolio.")
+        return context.report_prices[payload.factor_id].sort_index()
+
+    if payload.factor_type == "asset_fx":
+        asset_rows = context.asset_frame.loc[context.asset_frame["asset"] == payload.factor_id]
+        if asset_rows.empty:
+            raise ValueError("Selected FX factor asset could not be found in the analyzed portfolio.")
+        price_currency = str(asset_rows.iloc[0]["price_currency"]).upper()
+        if price_currency == context.report_currency:
+            raise ValueError("Selected asset is already priced in the report currency, so there is no separate FX factor.")
+        return fetch_fx_series(price_currency, context.report_currency, payload.period).sort_index()
+
+    if payload.factor_type == "major_index":
+        if payload.factor_id not in MAJOR_INDEX_FACTORS:
+            raise ValueError("Selected major index factor is not supported.")
+        _, ticker = MAJOR_INDEX_FACTORS[payload.factor_id]
+        prices, price_currency = fetch_yahoo_prices(ticker, payload.period)
+        series = prices.set_index("Date")["price"].sort_index()
+        converted_series, _ = convert_series_to_currency(series, (price_currency or "USD").upper(), context.report_currency, payload.period)
+        return converted_series
+
+    raise ValueError("Unsupported risk factor type.")
+
+
+def calculate_factor_statistics(
+    portfolio_returns: pd.Series, factor_returns: pd.Series
+) -> tuple[float | None, float | None, float | None, float | None, float | None]:
+    aligned = pd.concat(
+        [portfolio_returns.rename("portfolio"), factor_returns.rename("factor")],
+        axis=1,
+        join="inner",
+    ).dropna()
+    if len(aligned) < 60:
+        raise ValueError("Risk strategy analysis needs at least 60 overlapping return observations.")
+
+    correlation_frame = calculate_dcc_correlation_matrix(aligned)
+    correlation = float(correlation_frame.loc["portfolio", "factor"])
+
+    portfolio_volatility = float(aligned["portfolio"].std(ddof=1))
+    factor_volatility = float(aligned["factor"].std(ddof=1))
+    factor_variance = float(aligned["factor"].var(ddof=1))
+    if factor_variance == 0 or factor_volatility == 0:
+        raise ValueError("Selected factor has zero variance, so beta and hedge ratio cannot be calculated.")
+
+    covariance = float(aligned[["portfolio", "factor"]].cov().loc["portfolio", "factor"])
+    beta = covariance / factor_variance
+    hedge_ratio = beta * (portfolio_volatility / factor_volatility)
+    return correlation, beta, hedge_ratio, portfolio_volatility, factor_volatility
+
+
+def analyze_portfolio(payload: AnalyzePortfolioRequest) -> AnalyzePortfolioResponse:
+    context = build_portfolio_context(payload)
+
+    correlation = calculate_dcc_correlation_matrix(context.returns).fillna(0.0)
+    garch_vol = context.returns.apply(calculate_garch_volatility)
+    portfolio_vol = calculate_garch_volatility(context.portfolio_returns)
+    portfolio_volatility_series = calculate_garch_volatility_series(context.portfolio_returns).to_frame(name="portfolio_volatility")
+    var_95_return, var_95_amount, var_mean_return, var_std_return, var_95_cutoff_return = calculate_parametric_var_95(
+        context.portfolio_returns,
+        float(context.asset_frame["market_value_report"].sum()),
+    )
+    drawdown_series, max_drawdown = build_drawdown_series(context.portfolio_returns)
+    context.asset_frame["garch_volatility"] = context.asset_frame["asset"].map(garch_vol)
 
     assets = [
         AssetReport(**row)
-        for row in asset_frame[
+        for row in context.asset_frame[
             [
                 "asset",
                 "purchase_price",
@@ -189,11 +301,11 @@ def analyze_portfolio(payload: AnalyzePortfolioRequest) -> AnalyzePortfolioRespo
 
     return AnalyzePortfolioResponse(
         portfolio_name=payload.portfolio_name,
-        report_currency=report_currency,
+        report_currency=context.report_currency,
         period=payload.period,
-        total_cost_basis_report=float(asset_frame["cost_basis_report"].sum()),
-        total_market_value_report=float(asset_frame["market_value_report"].sum()),
-        total_profit_loss_report=float(asset_frame["profit_loss_report"].sum()),
+        total_cost_basis_report=float(context.asset_frame["cost_basis_report"].sum()),
+        total_market_value_report=float(context.asset_frame["market_value_report"].sum()),
+        total_profit_loss_report=float(context.asset_frame["profit_loss_report"].sum()),
         portfolio_garch_volatility=portfolio_vol,
         var_95_return=var_95_return,
         var_95_amount=var_95_amount,
@@ -201,11 +313,39 @@ def analyze_portfolio(payload: AnalyzePortfolioRequest) -> AnalyzePortfolioRespo
         var_std_return=var_std_return,
         var_95_cutoff_return=var_95_cutoff_return,
         assets=assets,
-        warnings=warnings,
-        normalized_prices=serialize_time_series(normalize_prices(report_prices)),
+        warnings=context.warnings,
+        normalized_prices=serialize_time_series(normalize_prices(context.report_prices)),
         correlation=serialize_correlation(correlation),
         garch_by_asset=garch_by_asset.to_dict(orient="records"),
-        recent_daily_returns=serialize_time_series(returns.tail(60)),
+        recent_daily_returns=serialize_time_series(context.returns.tail(60)),
+        portfolio_volatility_series=serialize_time_series(portfolio_volatility_series),
+        max_drawdown_series=serialize_time_series(drawdown_series),
+        max_drawdown=max_drawdown,
     )
 
+
+def analyze_risk_strategy(payload: RiskStrategyRequest) -> RiskStrategyResponse:
+    context = build_portfolio_context(payload)
+    factor_series = build_factor_series(payload, context)
+    factor_returns = factor_series.pct_change().dropna()
+    correlation, beta, hedge_ratio, portfolio_volatility, factor_volatility = calculate_factor_statistics(
+        context.portfolio_returns,
+        factor_returns,
+    )
+
+    return RiskStrategyResponse(
+        portfolio_name=payload.portfolio_name,
+        report_currency=context.report_currency,
+        period=payload.period,
+        factor_type=payload.factor_type,
+        factor_id=payload.factor_id,
+        factor_label=payload.factor_label,
+        direction=payload.direction,
+        correlation=correlation,
+        beta=beta,
+        hedge_ratio=hedge_ratio,
+        portfolio_volatility=portfolio_volatility,
+        factor_volatility=factor_volatility,
+        warnings=context.warnings,
+    )
 

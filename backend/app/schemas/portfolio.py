@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 
 SupportedPeriod = Literal["1y", "3y", "5y", "10y", "max"]
 PriceSource = Literal["yahoo_finance", "csv"]
+RiskFactorType = Literal["major_index", "asset_fx", "asset"]
+RiskDirection = Literal["up", "down"]
 
 
 class AssetInput(BaseModel):
@@ -24,6 +26,17 @@ class AnalyzePortfolioRequest(BaseModel):
     report_currency: str = Field(min_length=3, max_length=3)
     period: SupportedPeriod = "5y"
     assets: list[AssetInput] = Field(min_length=1)
+
+
+class RiskStrategyRequest(BaseModel):
+    portfolio_name: str = "My Portfolio"
+    report_currency: str = Field(min_length=3, max_length=3)
+    period: SupportedPeriod = "5y"
+    assets: list[AssetInput] = Field(min_length=1)
+    factor_type: RiskFactorType
+    factor_id: str = Field(min_length=1)
+    factor_label: str = Field(min_length=1)
+    direction: RiskDirection
 
 
 class AssetReport(BaseModel):
@@ -67,3 +80,22 @@ class AnalyzePortfolioResponse(BaseModel):
     correlation: list[dict[str, float | str]]
     garch_by_asset: list[dict[str, float | str]]
     recent_daily_returns: list[dict[str, float | str]]
+    portfolio_volatility_series: list[dict[str, float | str]]
+    max_drawdown_series: list[dict[str, float | str]]
+    max_drawdown: float | None = None
+
+
+class RiskStrategyResponse(BaseModel):
+    portfolio_name: str
+    report_currency: str
+    period: SupportedPeriod
+    factor_type: RiskFactorType
+    factor_id: str
+    factor_label: str
+    direction: RiskDirection
+    correlation: float | None = None
+    beta: float | None = None
+    hedge_ratio: float | None = None
+    portfolio_volatility: float | None = None
+    factor_volatility: float | None = None
+    warnings: list[str]

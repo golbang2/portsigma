@@ -1,5 +1,7 @@
 ﻿export type PriceSource = "yahoo_finance" | "csv";
 export type HistoryPeriod = "1y" | "3y" | "5y" | "10y" | "max";
+export type RiskFactorType = "major_index" | "asset_fx" | "asset";
+export type RiskDirection = "up" | "down";
 
 export type AssetDraft = {
   id: string;
@@ -17,6 +19,13 @@ export type AnalyzeRequest = {
   report_currency: string;
   period: HistoryPeriod;
   assets: Omit<AssetDraft, "id">[];
+};
+
+export type RiskStrategyRequest = AnalyzeRequest & {
+  factor_type: RiskFactorType;
+  factor_id: string;
+  factor_label: string;
+  direction: RiskDirection;
 };
 
 export type AssetReport = {
@@ -60,4 +69,23 @@ export type AnalyzeResponse = {
   correlation: Array<Record<string, string | number>>;
   garch_by_asset: Array<Record<string, string | number>>;
   recent_daily_returns: Array<Record<string, string | number>>;
+  portfolio_volatility_series: Array<Record<string, string | number>>;
+  max_drawdown_series: Array<Record<string, string | number>>;
+  max_drawdown: number | null;
+};
+
+export type RiskStrategyResponse = {
+  portfolio_name: string;
+  report_currency: string;
+  period: HistoryPeriod;
+  factor_type: RiskFactorType;
+  factor_id: string;
+  factor_label: string;
+  direction: RiskDirection;
+  correlation: number | null;
+  beta: number | null;
+  hedge_ratio: number | null;
+  portfolio_volatility: number | null;
+  factor_volatility: number | null;
+  warnings: string[];
 };

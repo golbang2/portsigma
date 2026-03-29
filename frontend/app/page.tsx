@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { ChangeEvent, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -20,10 +20,24 @@ import {
 
 import { AssetEditor } from "@/components/AssetEditor";
 import { MetricCard } from "@/components/MetricCard";
-import { analyzePortfolio } from "@/lib/api";
-import { DEFAULT_PRICE_CSV, HISTORY_PERIODS, REPORT_CURRENCIES } from "@/lib/constants";
+import { analyzePortfolio, analyzeRiskStrategy } from "@/lib/api";
+import { DEFAULT_PRICE_CSV, HISTORY_PERIODS, MAJOR_INDEX_OPTIONS, REPORT_CURRENCIES } from "@/lib/constants";
 import { assetsToPortfolioCsv, parsePortfolioCsv } from "@/lib/portfolio-csv";
-import type { AnalyzeResponse, AssetDraft, HistoryPeriod } from "@/lib/types";
+import type {
+  AnalyzeResponse,
+  AssetDraft,
+  HistoryPeriod,
+  RiskDirection,
+  RiskFactorType,
+  RiskStrategyResponse
+} from "@/lib/types";
+
+type RiskFactorOption = {
+  value: string;
+  factorType: RiskFactorType;
+  factorId: string;
+  label: string;
+};
 
 function createAsset(index: number): AssetDraft {
   return {
@@ -51,6 +65,13 @@ function formatPercent(value: number | null | undefined) {
     return "-";
   }
   return `${(value * 100).toFixed(2)}%`;
+}
+
+function formatSignedNumber(value: number | null | undefined, digits = 2) {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return "-";
+  }
+  return value.toFixed(digits);
 }
 
 function buildNormalCurveData(mean: number | null, std: number | null, cutoff: number | null) {
@@ -85,11 +106,22 @@ export default function HomePage() {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedRiskFactorValue, setSelectedRiskFactorValue] = useState("");
+  const [riskDirection, setRiskDirection] = useState<RiskDirection>("down");
+  const [riskResult, setRiskResult] = useState<RiskStrategyResponse | null>(null);
+  const [riskErrorMessage, setRiskErrorMessage] = useState("");
+  const [isRiskLoading, setIsRiskLoading] = useState(false);
   const uploadRef = useRef<HTMLInputElement | null>(null);
+
+  function resetRiskAnalysis() {
+    setRiskResult(null);
+    setRiskErrorMessage("");
+  }
 
   async function handleAnalyze() {
     setIsLoading(true);
     setErrorMessage("");
+    resetRiskAnalysis();
     try {
       const response = await analyzePortfolio({
         portfolio_name: portfolioName,
@@ -107,14 +139,17 @@ export default function HomePage() {
   }
 
   function updateAsset(nextAsset: AssetDraft) {
+    resetRiskAnalysis();
     setAssets((current) => current.map((asset) => (asset.id === nextAsset.id ? nextAsset : asset)));
   }
 
   function addAsset() {
+    resetRiskAnalysis();
     setAssets((current) => [...current, createAsset(current.length)]);
   }
 
   function removeAsset(id: string) {
+    resetRiskAnalysis();
     setAssets((current) => (current.length > 1 ? current.filter((asset) => asset.id !== id) : current));
   }
 
@@ -140,6 +175,7 @@ export default function HomePage() {
       setAssets(parsedAssets);
       setPortfolioName(file.name.replace(/\.csv$/i, ""));
       setErrorMessage("");
+      resetRiskAnalysis();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "포트폴리오 CSV를 읽지 못했습니다.");
     } finally {
@@ -159,6 +195,82 @@ export default function HomePage() {
     () => buildNormalCurveData(result?.var_mean_return ?? null, result?.var_std_return ?? null, result?.var_95_cutoff_return ?? null),
     [result?.var_mean_return, result?.var_std_return, result?.var_95_cutoff_return]
   );
+
+  const portfolioVolatilitySeries = result?.portfolio_volatility_series ?? [];
+  const maxDrawdownSeries = result?.max_drawdown_series ?? [];
+
+  const riskFactorOptions = useMemo<RiskFactorOption[]>(() => {
+    if (!result) {
+      return [];
+    }
+
+    const majorIndexOptions = MAJOR_INDEX_OPTIONS.map((item) => ({
+      value: `major_index:${item.id}`,
+      factorType: "major_index" as const,
+      factorId: item.id,
+      label: item.label
+    }));
+
+    const assetFxOptions = result.assets
+      .filter((asset) => asset.price_currency.toUpperCase() !== result.report_currency.toUpperCase())
+      .map((asset) => ({
+        value: `asset_fx:${asset.asset}`,
+        factorType: "asset_fx" as const,
+        factorId: asset.asset,
+        label: `${asset.asset} 환율 (${asset.price_currency}/${result.report_currency})`
+      }));
+
+    const assetOptions = result.assets.map((asset) => ({
+      value: `asset:${asset.asset}`,
+      factorType: "asset" as const,
+      factorId: asset.asset,
+      label: asset.asset
+    }));
+
+    return [...majorIndexOptions, ...assetFxOptions, ...assetOptions];
+  }, [result]);
+
+  const selectedRiskFactor = useMemo(
+    () => riskFactorOptions.find((option) => option.value === selectedRiskFactorValue) ?? null,
+    [riskFactorOptions, selectedRiskFactorValue]
+  );
+
+  useEffect(() => {
+    if (riskFactorOptions.length === 0) {
+      setSelectedRiskFactorValue("");
+      return;
+    }
+
+    if (!riskFactorOptions.some((option) => option.value === selectedRiskFactorValue)) {
+      setSelectedRiskFactorValue(riskFactorOptions[0].value);
+    }
+  }, [riskFactorOptions, selectedRiskFactorValue]);
+
+  async function handleRiskStrategyAnalyze() {
+    if (!result || !selectedRiskFactor) {
+      return;
+    }
+
+    setIsRiskLoading(true);
+    setRiskErrorMessage("");
+    try {
+      const response = await analyzeRiskStrategy({
+        portfolio_name: portfolioName,
+        report_currency: reportCurrency,
+        period,
+        assets: assets.map(({ id, ...asset }) => asset),
+        factor_type: selectedRiskFactor.factorType,
+        factor_id: selectedRiskFactor.factorId,
+        factor_label: selectedRiskFactor.label,
+        direction: riskDirection
+      });
+      setRiskResult(response);
+    } catch (error) {
+      setRiskErrorMessage(error instanceof Error ? error.message : "리스크 대비 전략 분석에 실패했습니다.");
+    } finally {
+      setIsRiskLoading(false);
+    }
+  }
 
   return (
     <main className="mx-auto max-w-7xl px-6 py-10">
@@ -180,7 +292,10 @@ export default function HomePage() {
               포트폴리오 이름
               <input
                 value={portfolioName}
-                onChange={(event) => setPortfolioName(event.target.value)}
+                onChange={(event) => {
+                  setPortfolioName(event.target.value);
+                  resetRiskAnalysis();
+                }}
                 className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-ember"
               />
             </label>
@@ -188,7 +303,10 @@ export default function HomePage() {
               기준 통화
               <select
                 value={reportCurrency}
-                onChange={(event) => setReportCurrency(event.target.value)}
+                onChange={(event) => {
+                  setReportCurrency(event.target.value);
+                  resetRiskAnalysis();
+                }}
                 className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-ember"
               >
                 {REPORT_CURRENCIES.map((currency) => (
@@ -202,7 +320,10 @@ export default function HomePage() {
               조회 기간
               <select
                 value={period}
-                onChange={(event) => setPeriod(event.target.value as HistoryPeriod)}
+                onChange={(event) => {
+                  setPeriod(event.target.value as HistoryPeriod);
+                  resetRiskAnalysis();
+                }}
                 className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-ember"
               >
                 {HISTORY_PERIODS.map((item) => (
@@ -350,6 +471,88 @@ export default function HomePage() {
             </div>
           </section>
 
+          <section className="mt-8 rounded-[30px] border border-white/70 bg-white/80 p-6 shadow-panel backdrop-blur">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Volatility Trend</p>
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h2 className="mt-2 text-2xl font-semibold text-ink">포트폴리오 변동성</h2>
+                <p className="mt-3 text-sm leading-7 text-slate-600">
+                  포트폴리오 일간 수익률에 GARCH를 적용한 조건부 변동성의 흐름입니다.
+                </p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">최근 변동성</p>
+                <p className="mt-2 text-2xl font-semibold text-ink">{formatPercent(result.portfolio_garch_volatility)}</p>
+              </div>
+            </div>
+            <div className="mt-5 h-80 rounded-2xl bg-slate-50 px-3 py-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={portfolioVolatilitySeries}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#d6d3d1" />
+                  <XAxis dataKey="date" stroke="#64748b" />
+                  <YAxis tickFormatter={(value: number) => `${(value * 100).toFixed(0)}%`} stroke="#64748b" />
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      const point = payload?.[0]?.payload as { date?: string } | undefined;
+                      const displayDate = point?.date ?? (typeof label === "string" ? label : "");
+                      if (!active || !payload?.length) {
+                        return null;
+                      }
+                      return (
+                        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
+                          <p>날짜 {displayDate || "-"}</p>
+                          <p>변동성 {(Number(payload[0]?.value) * 100).toFixed(2)}%</p>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Line type="monotone" dataKey="portfolio_volatility" stroke="#0f766e" strokeWidth={2.4} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+
+          <section className="mt-8 rounded-[30px] border border-white/70 bg-white/80 p-6 shadow-panel backdrop-blur">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Drawdown</p>
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h2 className="mt-2 text-2xl font-semibold text-ink">Maximum Drawdown</h2>
+                <p className="mt-3 text-sm leading-7 text-slate-600">
+                  포트폴리오가 이전 고점 대비 얼마나 하락했는지 시간 흐름에 따라 보여줍니다.
+                </p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">최대 낙폭</p>
+                <p className="mt-2 text-2xl font-semibold text-red-600">{formatPercent(result.max_drawdown)}</p>
+              </div>
+            </div>
+            <div className="mt-5 h-80 rounded-2xl bg-slate-50 px-3 py-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={maxDrawdownSeries}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#d6d3d1" />
+                  <XAxis dataKey="date" stroke="#64748b" />
+                  <YAxis tickFormatter={(value: number) => `${(value * 100).toFixed(0)}%`} stroke="#64748b" />
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      const point = payload?.[0]?.payload as { date?: string } | undefined;
+                      const displayDate = point?.date ?? (typeof label === "string" ? label : "");
+                      if (!active || !payload?.length) {
+                        return null;
+                      }
+                      return (
+                        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
+                          <p>날짜 {displayDate || "-"}</p>
+                          <p>변동성 {(Number(payload[0]?.value) * 100).toFixed(2)}%</p>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Area type="monotone" dataKey="drawdown" stroke="#dc2626" fill="#fecaca" fillOpacity={0.85} strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+
           <section className="mt-8 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <div className="rounded-[30px] border border-white/70 bg-white/80 p-6 shadow-panel backdrop-blur">
               <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Weights</p>
@@ -483,11 +686,104 @@ export default function HomePage() {
               </div>
             </div>
           </section>
+
+          <section className="mt-8 rounded-[30px] border border-white/70 bg-white/80 p-6 shadow-panel backdrop-blur">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Risk Strategy Prep</p>
+            <h2 className="mt-2 text-2xl font-semibold text-ink">리스크 대비 전략 분석</h2>
+            <div className="mt-5 flex flex-col gap-3 text-base text-slate-700 lg:flex-row lg:items-center lg:gap-4">
+              <span>나는</span>
+              <select
+                value={selectedRiskFactorValue}
+                onChange={(event) => {
+                  setSelectedRiskFactorValue(event.target.value);
+                  setRiskResult(null);
+                  setRiskErrorMessage("");
+                }}
+                className="min-w-[280px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-ember"
+              >
+                {riskFactorOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <span>이</span>
+              <select
+                value={riskDirection}
+                onChange={(event) => {
+                  setRiskDirection(event.target.value as RiskDirection);
+                  setRiskResult(null);
+                  setRiskErrorMessage("");
+                }}
+                className="w-[120px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-ember"
+              >
+                <option value="up">상승</option>
+                <option value="down">하락</option>
+              </select>
+              <span>하는 리스크에 대비하고 싶어</span>
+            </div>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleRiskStrategyAnalyze}
+                disabled={!selectedRiskFactor || isRiskLoading}
+                className="rounded-full bg-ink px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isRiskLoading ? "분석 중..." : "리스크 대비 전략 분석"}
+              </button>
+              {selectedRiskFactor ? <p className="text-sm text-slate-500">선택 요인: {selectedRiskFactor.label}</p> : null}
+            </div>
+
+            {riskErrorMessage ? (
+              <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{riskErrorMessage}</div>
+            ) : null}
+
+            {riskResult ? (
+              <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">포트폴리오와 대상자산의 상관계수</p>
+                  <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.correlation, 3)}</p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                  <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+                    <span>베타</span>
+                    <div className="group relative flex items-center">
+                      <button
+                        type="button"
+                        aria-label="베타 설명"
+                        className="inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border border-slate-300 bg-white text-[11px] font-semibold normal-case text-slate-500"
+                      >
+                        ?
+                      </button>
+                      <div className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 hidden w-64 -translate-x-1/2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-[11px] normal-case leading-5 text-slate-600 shadow-lg group-hover:block">
+                        포트폴리오가 전체 시장 움직임에 얼마나 민감하게 반응하는지를 나타내는 상대적 변동성 지표입니다.
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.beta, 3)}</p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">헤지비율</p>
+                  <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.hedge_ratio, 3)}</p>
+                </div>
+
+              </div>
+            ) : null}
+
+            {riskResult?.warnings.length ? (
+              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                {riskResult.warnings.map((warning) => (
+                  <p key={warning}>{warning}</p>
+                ))}
+              </div>
+            ) : null}
+          </section>
         </>
       ) : null}
     </main>
   );
 }
+
 
 
 
