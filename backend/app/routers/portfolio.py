@@ -1,4 +1,6 @@
-﻿from fastapi import APIRouter, HTTPException
+﻿import os
+
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from app.schemas.portfolio import (
@@ -33,10 +35,10 @@ def analyze_risk_strategy_endpoint(payload: RiskStrategyRequest) -> RiskStrategy
 
 @router.post("/portfolio/strategy-recommend")
 def strategy_recommend_endpoint(payload: StrategyRecommendRequest) -> StreamingResponse:
-    try:
-        return StreamingResponse(
-            stream_strategy_recommendation(payload),
-            media_type="text/plain; charset=utf-8",
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    api_key = payload.openai_api_key or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=400, detail="OpenAI API 키가 필요합니다. 키를 입력해주세요.")
+    return StreamingResponse(
+        stream_strategy_recommendation(payload),
+        media_type="text/plain; charset=utf-8",
+    )

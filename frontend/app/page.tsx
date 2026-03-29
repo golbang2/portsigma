@@ -169,9 +169,14 @@ export default function HomePage() {
       openai_api_key: openaiApiKey || undefined,
     };
     try {
-      await streamStrategyRecommendation(payload, (chunk) =>
-        setRecommendation((prev) => prev + chunk)
-      );
+      let received = false;
+      await streamStrategyRecommendation(payload, (chunk) => {
+        received = true;
+        setRecommendation((prev) => prev + chunk);
+      });
+      if (!received) {
+        setRecommendError("응답을 받지 못했습니다. API 키를 확인하거나 다시 시도해주세요.");
+      }
     } catch (error) {
       setRecommendError(error instanceof Error ? error.message : "전략 추천에 실패했습니다.");
     } finally {
