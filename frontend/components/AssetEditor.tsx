@@ -46,7 +46,7 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
         </label>
 
         {asset.source_type === "yahoo_finance" ? (
-          <label className="flex flex-col gap-2 text-sm text-slate-700 md:col-span-2">
+          <label className="flex flex-col gap-2 text-sm text-slate-700">
             종목코드
             <input
               value={asset.ticker}
@@ -56,7 +56,7 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
             />
           </label>
         ) : (
-          <label className="flex flex-col gap-2 text-sm text-slate-700 md:col-span-2">
+          <label className="flex flex-col gap-2 text-sm text-slate-700">
             가격 CSV
             <textarea
               value={asset.csv_text}
