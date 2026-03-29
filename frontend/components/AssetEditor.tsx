@@ -8,13 +8,12 @@ import type { AssetDraft } from "@/lib/types";
 type AssetEditorProps = {
   asset: AssetDraft;
   index: number;
-  reportCurrency: string;
   hideCsv?: boolean;
   onChange: (next: AssetDraft) => void;
   onRemove: () => void;
 };
 
-export function AssetEditor({ asset, index, reportCurrency, hideCsv = false, onChange, onRemove }: AssetEditorProps) {
+export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove }: AssetEditorProps) {
   useEffect(() => {
     if (hideCsv && asset.source_type === "csv") {
       onChange({ ...asset, source_type: "yahoo_finance" });
@@ -23,10 +22,7 @@ export function AssetEditor({ asset, index, reportCurrency, hideCsv = false, onC
   return (
     <section className="rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:rounded-[28px] sm:p-6">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Asset {index + 1}</p>
-          <h3 className="mt-2 text-xl font-semibold text-ink">자산 입력</h3>
-        </div>
+        <h3 className="text-xl font-semibold text-ink">Asset {index + 1}</h3>
         <button
           type="button"
           onClick={onRemove}
@@ -37,15 +33,6 @@ export function AssetEditor({ asset, index, reportCurrency, hideCsv = false, onC
       </div>
 
       <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4 md:grid-cols-2">
-        <label className="flex flex-col gap-2 text-sm text-slate-700">
-          자산명
-          <input
-            value={asset.name}
-            onChange={(event) => onChange({ ...asset, name: event.target.value })}
-            className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-ember"
-          />
-        </label>
-
         <label className="flex flex-col gap-2 text-sm text-slate-700">
           가격 소스
           <select

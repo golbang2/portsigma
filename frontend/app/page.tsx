@@ -251,7 +251,7 @@ export default function HomePage() {
         portfolio_name: portfolioName,
         report_currency: reportCurrency,
         period,
-        assets: assets.map(({ id, ...asset }) => asset)
+        assets: assets.map(({ id, ...asset }, i) => ({ ...asset, name: `Asset ${i + 1}` }))
       });
       setResult(response);
       setWarnings(response.warnings);
@@ -407,7 +407,7 @@ export default function HomePage() {
         portfolio_name: portfolioName,
         report_currency: reportCurrency,
         period,
-        assets: assets.map(({ id, ...asset }) => asset),
+        assets: assets.map(({ id, ...asset }, i) => ({ ...asset, name: `Asset ${i + 1}` })),
         factor_type: selectedRiskFactor.factorType,
         factor_id: selectedRiskFactor.factorId,
         factor_label: selectedRiskFactor.label,
@@ -534,7 +534,6 @@ export default function HomePage() {
             key={asset.id}
             asset={asset}
             index={index}
-            reportCurrency={reportCurrency}
             hideCsv={isMobile}
             onChange={updateAsset}
             onRemove={() => removeAsset(asset.id)}
