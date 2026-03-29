@@ -147,6 +147,7 @@ export default function HomePage() {
   const [recommendation, setRecommendation] = useState("");
   const [isRecommending, setIsRecommending] = useState(false);
   const [recommendError, setRecommendError] = useState("");
+  const [userContext, setUserContext] = useState("");
   const [openaiApiKey, setOpenaiApiKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -225,6 +226,7 @@ export default function HomePage() {
       portfolio_volatility: riskResult.portfolio_volatility,
       factor_volatility: riskResult.factor_volatility,
       openai_api_key: openaiApiKey || undefined,
+      user_context: userContext.trim() || undefined,
     };
     try {
       let received = false;
@@ -1005,6 +1007,21 @@ export default function HomePage() {
                       {showApiKey ? "숨기기" : "보기"}
                     </button>
                   </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                    추가 요청사항
+                    <span className="ml-1 font-normal text-slate-400">(선택)</span>
+                  </label>
+                  <textarea
+                    value={userContext}
+                    onChange={(e) => setUserContext(e.target.value)}
+                    maxLength={1000}
+                    rows={3}
+                    placeholder="예: 국내 주식 위주 포트폴리오입니다. 환헤지 방법도 같이 설명해주세요."
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder-slate-300 outline-none focus:border-pine focus:ring-1 focus:ring-pine resize-none"
+                  />
                 </div>
 
                 {recommendError ? (

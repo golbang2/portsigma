@@ -68,6 +68,9 @@ def stream_strategy_recommendation(payload: StrategyRecommendRequest) -> Iterato
 상승 위험 대응이라면 상관관계만으로 결론내리지 말고, 포지션 방향과 손익 구조까지 함께 설명해주세요.
 대상과 포트폴리오의 양의 상관관계가 높을 때 그 대상을 같은 방향으로 추가 편입하면 노출 확대가 될 수 있다는 점도 명시해주세요."""
 
+    if payload.user_context and payload.user_context.strip():
+        user_message += f"\n\n## 사용자 추가 요청\n\n{payload.user_context.strip()}"
+
     client = OpenAI(api_key=api_key)  # noqa: S106 — key from user input, not hardcoded
     stream = client.chat.completions.create(
         model="gpt-4o-mini",

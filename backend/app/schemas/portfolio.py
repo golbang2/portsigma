@@ -112,3 +112,4 @@ class StrategyRecommendRequest(BaseModel):
     portfolio_volatility: float | None = None
     factor_volatility: float | None = None
     openai_api_key: str | None = None
+    user_context: str = Field(default="", max_length=1000)

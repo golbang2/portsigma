@@ -85,6 +85,7 @@ export type StrategyRecommendRequest = {
   portfolio_volatility: number | null;
   factor_volatility: number | null;
   openai_api_key?: string;
+  user_context?: string;
 };
 
 export type RiskStrategyResponse = {
