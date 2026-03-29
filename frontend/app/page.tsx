@@ -871,11 +871,6 @@ export default function HomePage() {
                   );
                 })() : null}
               </div>
-              <div className="border-t border-slate-100 px-5 py-3 flex flex-wrap gap-3 text-[11px] text-slate-400">
-                <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-teal-100 border border-teal-200" />양의 상관</span>
-                <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-white border border-slate-200" />낮은 상관</span>
-                <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-red-100 border border-red-200" />음의 상관</span>
-              </div>
             </div>
           </section>
 
