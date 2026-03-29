@@ -23,11 +23,9 @@ def fetch_yahoo_prices(ticker: str, period: str) -> tuple[pd.DataFrame, str | No
     except Exception:  # noqa: BLE001
         detected_currency = None
 
-    if not detected_currency:
-        try:
-            detected_currency = ticker_obj.info.get("currency")
-        except Exception:  # noqa: BLE001
-            detected_currency = None
+    # NOTE: ticker_obj.info is intentionally omitted — it makes a slow secondary HTTP request
+    # that frequently times out or gets rate-limited on cloud deployments (Render/AWS IPs).
+    # fast_info is sufficient; callers fall back to "USD" when currency is None.
 
     return prices, detected_currency
 

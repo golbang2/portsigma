@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from io import StringIO
 
@@ -131,6 +132,48 @@ def calculate_parametric_var_95(
     return var_return, var_amount, mean_return, std_return, threshold_return
 
 
+def _fetch_asset(
+    asset,
+    report_currency: str,
+    period: str,
+) -> tuple[dict | None, str | None]:
+    """Fetch and process a single asset. Returns (result, warning) — one is always None."""
+    try:
+        prices, price_currency = load_asset_data(asset.source_type, asset.ticker, asset.csv_text, period)
+        series = prices.set_index("Date")["price"].sort_index()
+        effective_price_currency = (price_currency or report_currency).upper()
+        converted_series, market_fx_rate = convert_series_to_currency(
+            series,
+            effective_price_currency,
+            report_currency,
+            period,
+        )
+        converted_cost_basis, purchase_fx_rate = convert_amount(
+            asset.purchase_price * asset.quantity,
+            asset.purchase_currency.upper(),
+            report_currency,
+            period,
+        )
+        return {
+            "name": asset.name,
+            "series": series,
+            "converted_series": converted_series,
+            "row": {
+                "asset": asset.name,
+                "purchase_price": asset.purchase_price,
+                "purchase_currency": asset.purchase_currency.upper(),
+                "quantity": asset.quantity,
+                "price_currency": effective_price_currency,
+                "cost_basis_original": asset.purchase_price * asset.quantity,
+                "cost_basis_report": converted_cost_basis,
+                "purchase_fx_rate": purchase_fx_rate,
+                "market_fx_rate": market_fx_rate,
+            },
+        }, None
+    except Exception as exc:  # noqa: BLE001
+        return None, f"{asset.name}: {exc}"
+
+
 def build_portfolio_context(payload: AnalyzePortfolioRequest | RiskStrategyRequest) -> PortfolioContext:
     report_currency = payload.report_currency.upper()
     local_series_map: dict[str, pd.Series] = {}
@@ -138,40 +181,23 @@ def build_portfolio_context(payload: AnalyzePortfolioRequest | RiskStrategyReque
     asset_rows: list[dict[str, float | str]] = []
     warnings: list[str] = []
 
-    for asset in payload.assets:
-        try:
-            prices, price_currency = load_asset_data(asset.source_type, asset.ticker, asset.csv_text, payload.period)
-            series = prices.set_index("Date")["price"].sort_index()
-            effective_price_currency = (price_currency or report_currency).upper()
-            converted_series, market_fx_rate = convert_series_to_currency(
-                series,
-                effective_price_currency,
-                report_currency,
-                payload.period,
-            )
-            converted_cost_basis, purchase_fx_rate = convert_amount(
-                asset.purchase_price * asset.quantity,
-                asset.purchase_currency.upper(),
-                report_currency,
-                payload.period,
-            )
-            local_series_map[asset.name] = series
-            converted_series_map[asset.name] = converted_series
-            asset_rows.append(
-                {
-                    "asset": asset.name,
-                    "purchase_price": asset.purchase_price,
-                    "purchase_currency": asset.purchase_currency.upper(),
-                    "quantity": asset.quantity,
-                    "price_currency": effective_price_currency,
-                    "cost_basis_original": asset.purchase_price * asset.quantity,
-                    "cost_basis_report": converted_cost_basis,
-                    "purchase_fx_rate": purchase_fx_rate,
-                    "market_fx_rate": market_fx_rate,
-                }
-            )
-        except Exception as exc:  # noqa: BLE001
-            warnings.append(f"{asset.name}: {exc}")
+    # Fetch all assets in parallel to avoid sequential Yahoo Finance latency on Render.
+    # Results are collected in submission order to preserve asset ordering.
+    max_workers = min(len(payload.assets), 8)
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [
+            executor.submit(_fetch_asset, asset, report_currency, payload.period)
+            for asset in payload.assets
+        ]
+        fetch_results = [f.result() for f in futures]
+
+    for result, warning in fetch_results:
+        if warning is not None:
+            warnings.append(warning)
+        else:
+            local_series_map[result["name"]] = result["series"]
+            converted_series_map[result["name"]] = result["converted_series"]
+            asset_rows.append(result["row"])
 
     if not asset_rows or not converted_series_map:
         raise ValueError("No analyzable asset price data is available.")
