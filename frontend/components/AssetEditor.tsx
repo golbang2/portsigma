@@ -60,7 +60,7 @@ export function AssetEditor({ asset, index, reportCurrency, hideCsv = false, onC
 
         {asset.source_type === "yahoo_finance" ? (
           <label className="flex flex-col gap-2 text-sm text-slate-700 md:col-span-2">
-            티커
+            종목코드
             <input
               value={asset.ticker}
               onChange={(event) => onChange({ ...asset, ticker: event.target.value })}
@@ -102,9 +102,6 @@ export function AssetEditor({ asset, index, reportCurrency, hideCsv = false, onC
               ))}
             </select>
           </div>
-          <span className="text-xs text-slate-500">
-            실제 매수에 사용한 화폐를 선택하세요. CSV 가격 자체는 여전히 {reportCurrency} 기준입니다.
-          </span>
         </div>
 
         <label className="flex flex-col gap-2 text-sm text-slate-700">
