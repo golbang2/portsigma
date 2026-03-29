@@ -19,7 +19,9 @@ SYSTEM_PROMPT = """당신은 포트폴리오 리스크 관리 전문가입니다
 
 전문 용어는 괄호 안에 한글 설명을 추가해주세요.
 특정 종목명, 개별 ETF 티커, 특정 상품명, 매수 지시형 표현은 사용하지 말고,
-지수 인버스형 수단, 채권형 자산, 금 관련 자산, 옵션 기반 방어 전략처럼 일반적인 범주 수준으로만 설명해주세요."""
+지수 인버스형 수단, 채권형 자산, 금 관련 자산, 옵션 기반 방어 전략처럼 일반적인 범주 수준으로만 설명해주세요.
+특히 사용자가 상승 위험에 대비하려는 상황에서 포트폴리오와 대상 자산의 양의 상관관계가 높다면,
+그 대상을 방어 수단으로 쓰는 것은 위험을 상쇄하지 못하고 같은 방향 노출을 늘리는 역효과가 날 수 있음을 분명히 설명해주세요."""
 
 
 def _format_value(v: float | None, as_percent: bool = False, decimals: int = 3) -> str:
@@ -60,7 +62,8 @@ def stream_strategy_recommendation(payload: StrategyRecommendRequest) -> Iterato
 {docs_text}
 
 위 분석 결과를 바탕으로 일반적인 헤지 방향과 고려 요소를 설명해주세요.
-특정 종목명이나 개별 상품명을 직접 추천하지 말고 범주 수준에서만 제안해주세요."""
+특정 종목명이나 개별 상품명을 직접 추천하지 말고 범주 수준에서만 제안해주세요.
+상승 위험에 대비하려는데 대상과 포트폴리오의 양의 상관관계가 높다면, 그 점을 명시적으로 경고해주세요."""
 
     client = OpenAI(api_key=api_key)  # noqa: S106 — key from user input, not hardcoded
     stream = client.chat.completions.create(
