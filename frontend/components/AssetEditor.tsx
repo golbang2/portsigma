@@ -33,18 +33,6 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
       </div>
 
       <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4 md:grid-cols-2">
-        <label className="flex flex-col gap-2 text-sm text-slate-700">
-          가격 소스
-          <select
-            value={asset.source_type}
-            onChange={(event) => onChange({ ...asset, source_type: event.target.value as AssetDraft["source_type"] })}
-            className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-ember"
-          >
-            <option value="yahoo_finance">Yahoo Finance</option>
-            {!hideCsv && <option value="csv">CSV 입력</option>}
-          </select>
-        </label>
-
         {asset.source_type === "yahoo_finance" ? (
           <label className="flex flex-col gap-2 text-sm text-slate-700">
             종목코드
@@ -65,6 +53,18 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
             />
           </label>
         )}
+
+        <label className="flex flex-col gap-2 text-sm text-slate-700">
+          가격 소스
+          <select
+            value={asset.source_type}
+            onChange={(event) => onChange({ ...asset, source_type: event.target.value as AssetDraft["source_type"] })}
+            className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-ember"
+          >
+            <option value="yahoo_finance">Yahoo Finance</option>
+            {!hideCsv && <option value="csv">CSV 입력</option>}
+          </select>
+        </label>
 
         <div className="flex flex-col gap-2 text-sm text-slate-700">
           <span>매수가</span>
