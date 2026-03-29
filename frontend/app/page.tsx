@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -75,6 +75,36 @@ function formatSignedNumber(value: number | null | undefined, digits = 2) {
     return "-";
   }
   return value.toFixed(digits);
+}
+
+function correlationCellStyle(value: number | string): React.CSSProperties {
+  if (typeof value !== "number") return {};
+  const v = Math.max(-1, Math.min(1, value));
+  if (v > 0) {
+    // white → #0f766e (teal-700)
+    const t = v;
+    const r = Math.round(255 + t * (15 - 255));
+    const g = Math.round(255 + t * (118 - 255));
+    const b = Math.round(255 + t * (110 - 255));
+    return {
+      backgroundColor: `rgb(${r},${g},${b})`,
+      color: t > 0.5 ? "#ffffff" : "#134e4a",
+      fontWeight: t > 0.5 ? 600 : 400,
+    };
+  }
+  if (v < 0) {
+    // white → #dc2626 (red-600)
+    const t = -v;
+    const r = Math.round(255 + t * (220 - 255));
+    const g = Math.round(255 + t * (38 - 255));
+    const b = Math.round(255 + t * (38 - 255));
+    return {
+      backgroundColor: `rgb(${r},${g},${b})`,
+      color: t > 0.5 ? "#ffffff" : "#7f1d1d",
+      fontWeight: t > 0.5 ? 600 : 400,
+    };
+  }
+  return { color: "#94a3b8" };
 }
 
 function buildNormalCurveData(mean: number | null, std: number | null, cutoff: number | null) {
@@ -357,9 +387,7 @@ export default function HomePage() {
         <div className="border-b border-slate-100 pb-5 sm:pb-7">
           <p className="text-xs font-semibold uppercase tracking-[0.35em] text-ember">Portsigma</p>
           <h1 className="mt-3 text-3xl font-semibold leading-tight text-ink sm:text-4xl md:text-5xl">
-            자산 비중과 변동성을
-            <br />
-            <span className="text-ember">한 번에 보는 포트폴리오 대시보드</span>
+            포트폴리오 위험관리 대시보드
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-500">
             내 주식·코인·펀드를 한 곳에 모아 수익률, 위험도, 통화별 환산까지 한눈에 파악하세요.
@@ -703,31 +731,47 @@ export default function HomePage() {
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
-                  <thead className="bg-slate-50 text-left text-slate-500">
+                  <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-400">
                     <tr>
-                      <th className="px-4 py-3">자산</th>
-                      <th className="px-4 py-3">현재가</th>
-                      <th className="px-4 py-3">평가금액</th>
-                      <th className="px-4 py-3">비중</th>
-                      <th className="px-4 py-3">손익</th>
-                      <th className="px-4 py-3">변동성</th>
+                      <th className="px-5 py-3 text-left">자산</th>
+                      <th className="px-5 py-3 text-right">현재가</th>
+                      <th className="px-5 py-3 text-right">평가금액</th>
+                      <th className="px-5 py-3 text-right">비중</th>
+                      <th className="px-5 py-3 text-right">손익</th>
+                      <th className="px-5 py-3 text-right">수익률</th>
+                      <th className="px-5 py-3 text-right">변동성</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {result.assets.map((asset) => (
-                      <tr key={asset.asset} className="border-t border-slate-100">
-                        <td className="px-4 py-3 font-medium text-ink">{asset.asset}</td>
-                        <td className="px-4 py-3 text-slate-600">
-                          {asset.latest_price_report.toFixed(2)} {reportCurrency}
-                        </td>
-                        <td className="px-4 py-3 text-slate-600">{formatMoney(asset.market_value_report, reportCurrency)}</td>
-                        <td className="px-4 py-3 text-slate-600">{formatPercent(asset.market_weight_report)}</td>
-                        <td className={`px-4 py-3 ${asset.profit_loss_report >= 0 ? "text-pine" : "text-red-600"}`}>
-                          {formatMoney(asset.profit_loss_report, reportCurrency)}
-                        </td>
-                        <td className="px-4 py-3 text-slate-600">{formatPercent(asset.garch_volatility)}</td>
-                      </tr>
-                    ))}
+                    {result.assets.map((asset) => {
+                      const returnRate = asset.cost_basis_report > 0
+                        ? asset.profit_loss_report / asset.cost_basis_report
+                        : null;
+                      const isProfit = asset.profit_loss_report >= 0;
+                      return (
+                        <tr key={asset.asset} className="border-t border-slate-100 transition-colors hover:bg-slate-50/70">
+                          <td className="px-5 py-3.5 font-semibold text-ink">{asset.asset}</td>
+                          <td className="px-5 py-3.5 text-right tabular-nums text-slate-600">
+                            {formatMoney(asset.latest_price_report, reportCurrency)}
+                          </td>
+                          <td className="px-5 py-3.5 text-right tabular-nums text-slate-700 font-medium">
+                            {formatMoney(asset.market_value_report, reportCurrency)}
+                          </td>
+                          <td className="px-5 py-3.5 text-right tabular-nums text-slate-500">
+                            {formatPercent(asset.market_weight_report)}
+                          </td>
+                          <td className={`px-5 py-3.5 text-right tabular-nums font-medium ${isProfit ? "text-pine" : "text-red-500"}`}>
+                            {isProfit ? "+" : ""}{formatMoney(asset.profit_loss_report, reportCurrency)}
+                          </td>
+                          <td className={`px-5 py-3.5 text-right tabular-nums text-sm ${isProfit ? "text-pine" : "text-red-500"}`}>
+                            {returnRate !== null ? `${isProfit ? "+" : ""}${(returnRate * 100).toFixed(2)}%` : "-"}
+                          </td>
+                          <td className="px-5 py-3.5 text-right tabular-nums text-slate-500">
+                            {formatPercent(asset.garch_volatility)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -739,30 +783,51 @@ export default function HomePage() {
                 <h2 className="mt-2 text-2xl font-semibold text-ink">상관관계</h2>
               </div>
               <div className="overflow-x-auto px-4 py-4">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-slate-50 text-left text-slate-500">
-                    <tr>
-                      {result.correlation[0]
-                        ? Object.keys(result.correlation[0]).map((key) => (
-                            <th key={key} className="px-3 py-2">
+                {result.correlation[0] ? (() => {
+                  const allKeys = Object.keys(result.correlation[0]);
+                  const labelKey = allKeys[0];
+                  const valueKeys = allKeys.slice(1);
+                  return (
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr>
+                          <th className="px-3 py-2" />
+                          {valueKeys.map((key) => (
+                            <th key={key} className="px-3 py-2 text-center text-xs font-semibold text-slate-600 whitespace-nowrap">
                               {key}
                             </th>
-                          ))
-                        : null}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.correlation.map((row, index) => (
-                      <tr key={index} className="border-t border-slate-100">
-                        {Object.entries(row).map(([key, value]) => (
-                          <td key={key} className="px-3 py-2 text-slate-600">
-                            {typeof value === "number" ? value.toFixed(2) : value}
-                          </td>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {result.correlation.map((row, index) => (
+                          <tr key={index} className="border-t border-slate-100">
+                            <td className="px-3 py-2.5 text-xs font-semibold text-slate-600 whitespace-nowrap text-left">
+                              {String(row[labelKey])}
+                            </td>
+                            {valueKeys.map((key) => {
+                              const val = row[key];
+                              return (
+                                <td
+                                  key={key}
+                                  className="px-3 py-2.5 text-center text-xs tabular-nums"
+                                  style={correlationCellStyle(val)}
+                                >
+                                  {typeof val === "number" ? val.toFixed(2) : "-"}
+                                </td>
+                              );
+                            })}
+                          </tr>
                         ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                      </tbody>
+                    </table>
+                  );
+                })() : null}
+              </div>
+              <div className="border-t border-slate-100 px-5 py-3 flex flex-wrap gap-3 text-[11px] text-slate-400">
+                <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-teal-100 border border-teal-200" />양의 상관</span>
+                <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-white border border-slate-200" />낮은 상관</span>
+                <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm bg-red-100 border border-red-200" />음의 상관</span>
               </div>
             </div>
           </section>
