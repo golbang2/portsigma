@@ -111,7 +111,16 @@ export default function HomePage() {
   const [riskResult, setRiskResult] = useState<RiskStrategyResponse | null>(null);
   const [riskErrorMessage, setRiskErrorMessage] = useState("");
   const [isRiskLoading, setIsRiskLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const uploadRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 639px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   function resetRiskAnalysis() {
     setRiskResult(null);
@@ -199,6 +208,18 @@ export default function HomePage() {
   const portfolioVolatilitySeries = result?.portfolio_volatility_series ?? [];
   const maxDrawdownSeries = result?.max_drawdown_series ?? [];
 
+  const normalizedPricesForChart = useMemo(
+    () =>
+      (result?.normalized_prices ?? []).map((row) => {
+        const out: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(row)) {
+          out[k] = v === "" || v === 0 ? null : v;
+        }
+        return out;
+      }),
+    [result?.normalized_prices]
+  );
+
   const riskFactorOptions = useMemo<RiskFactorOption[]>(() => {
     if (!result) {
       return [];
@@ -273,99 +294,101 @@ export default function HomePage() {
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-6 py-10">
-      <section className="rounded-[36px] border border-white/70 bg-white/75 p-8 shadow-panel backdrop-blur">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="text-sm uppercase tracking-[0.3em] text-slate-500">Portsigma</p>
-            <h1 className="mt-3 text-4xl font-semibold leading-tight text-ink md:text-5xl">
-              자산 비중과 변동성을
-              <span className="text-ember"> 한 번에 보는 포트폴리오 대시보드 </span>
-            </h1>
-            <p className="mt-4 text-base leading-7 text-slate-600">
-              Yahoo Finance 가격 이력, CSV 입력, 환율 변환, 변동성 분석까지 한 화면에서 확인할 수 있습니다.
-            </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[420px]">
-            <label className="flex flex-col gap-2 text-sm text-slate-700">
-              포트폴리오 이름
-              <input
-                value={portfolioName}
-                onChange={(event) => {
-                  setPortfolioName(event.target.value);
-                  resetRiskAnalysis();
-                }}
-                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-ember"
-              />
-            </label>
-            <label className="flex flex-col gap-2 text-sm text-slate-700">
-              기준 통화
-              <select
-                value={reportCurrency}
-                onChange={(event) => {
-                  setReportCurrency(event.target.value);
-                  resetRiskAnalysis();
-                }}
-                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-ember"
-              >
-                {REPORT_CURRENCIES.map((currency) => (
-                  <option key={currency} value={currency}>
-                    {currency}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-2 text-sm text-slate-700">
-              조회 기간
-              <select
-                value={period}
-                onChange={(event) => {
-                  setPeriod(event.target.value as HistoryPeriod);
-                  resetRiskAnalysis();
-                }}
-                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-ember"
-              >
-                {HISTORY_PERIODS.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-2 text-sm text-slate-700">
-              저장된 포트폴리오 CSV
-              <input
-                ref={uploadRef}
-                type="file"
-                accept=".csv"
-                onChange={handlePortfolioUpload}
-                className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm"
-              />
-            </label>
-          </div>
+    <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10">
+      <section className="rounded-[28px] border border-white/70 bg-white/75 p-5 shadow-panel backdrop-blur sm:rounded-[36px] sm:p-8">
+        {/* 히어로 */}
+        <div className="border-b border-slate-100 pb-5 sm:pb-7">
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-ember">Portsigma</p>
+          <h1 className="mt-3 text-3xl font-semibold leading-tight text-ink sm:text-4xl md:text-5xl">
+            자산 비중과 변동성을
+            <br />
+            <span className="text-ember">한 번에 보는 포트폴리오 대시보드</span>
+          </h1>
+          <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-500">
+            Yahoo Finance 가격 이력 · 환율 변환 · GARCH 변동성 분석을 한 화면에서 확인하세요.
+          </p>
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-3">
+        {/* 설정 */}
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:mt-6 sm:grid-cols-2 sm:gap-4 md:grid-cols-4">
+          <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-500">
+            포트폴리오 이름
+            <input
+              value={portfolioName}
+              onChange={(event) => {
+                setPortfolioName(event.target.value);
+                resetRiskAnalysis();
+              }}
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ember"
+            />
+          </label>
+          <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-500">
+            기준 통화
+            <select
+              value={reportCurrency}
+              onChange={(event) => {
+                setReportCurrency(event.target.value);
+                resetRiskAnalysis();
+              }}
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ember"
+            >
+              {REPORT_CURRENCIES.map((currency) => (
+                <option key={currency} value={currency}>
+                  {currency}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-500">
+            조회 기간
+            <select
+              value={period}
+              onChange={(event) => {
+                setPeriod(event.target.value as HistoryPeriod);
+                resetRiskAnalysis();
+              }}
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ember"
+            >
+              {HISTORY_PERIODS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="hidden flex-col gap-1.5 text-xs font-medium text-slate-500 sm:flex">
+            포트폴리오 CSV 불러오기
+            <input
+              ref={uploadRef}
+              type="file"
+              accept=".csv"
+              onChange={handlePortfolioUpload}
+              className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-500"
+            />
+          </label>
+        </div>
+
+        {/* 액션 버튼 */}
+        <div className="mt-4 flex flex-wrap items-center gap-2 sm:mt-5">
           <button
             type="button"
             onClick={addAsset}
-            className="rounded-full bg-ink px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+            className="rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
           >
             자산 추가
           </button>
           <button
             type="button"
             onClick={downloadPortfolioCsv}
-            className="rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-ember hover:text-ember"
+            className="hidden rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:border-ember hover:text-ember sm:inline-flex"
           >
-            포트폴리오 CSV 저장
+            CSV 저장
           </button>
           <button
             type="button"
             onClick={handleAnalyze}
             disabled={isLoading}
-            className="rounded-full bg-ember px-5 py-3 text-sm font-medium text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="ml-auto rounded-full bg-ember px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? "분석 중..." : "분석 실행"}
           </button>
@@ -379,6 +402,7 @@ export default function HomePage() {
             asset={asset}
             index={index}
             reportCurrency={reportCurrency}
+            hideCsv={isMobile}
             onChange={updateAsset}
             onRemove={() => removeAsset(asset.id)}
           />
@@ -397,7 +421,7 @@ export default function HomePage() {
 
       {result ? (
         <>
-          <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <section className="mt-6 grid gap-3 sm:mt-8 sm:gap-4 md:grid-cols-2 xl:grid-cols-5">
             <MetricCard label="총 투자원가" value={formatMoney(result.total_cost_basis_report, reportCurrency)} />
             <MetricCard label="총 평가금액" value={formatMoney(result.total_market_value_report, reportCurrency)} />
             <MetricCard
@@ -405,7 +429,7 @@ export default function HomePage() {
               value={formatMoney(result.total_profit_loss_report, reportCurrency)}
               tone={result.total_profit_loss_report >= 0 ? "positive" : "negative"}
             />
-            <MetricCard label="포트폴리오 변동성" value={formatPercent(result.portfolio_garch_volatility)} />
+            <MetricCard label="포트폴리오 변동성" value={formatPercent(result.portfolio_garch_volatility)} keepDecimals />
             <MetricCard
               label="VaR 95%"
               value={result.var_95_amount !== null ? formatMoney(result.var_95_amount, reportCurrency) : "-"}
@@ -413,14 +437,14 @@ export default function HomePage() {
             />
           </section>
 
-          <section className="mt-8 rounded-[30px] border border-white/70 bg-white/80 p-6 shadow-panel backdrop-blur">
+          <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">VaR</p>
             <h2 className="mt-2 text-2xl font-semibold text-ink">Value at Risk</h2>
             <p className="mt-4 text-sm leading-7 text-slate-600">
               VaR 95%는 포트폴리오의 하루 수익률이 정규분포를 따른다고 가정할 때, 하위 5% 구간에 들어가는 손실 임계값입니다.
               평소와 비슷한 시장 조건이 이어진다면 100일 중 약 5일 정도는 이 손실보다 더 나쁠 수 있습니다.
             </p>
-            <div className="mt-5 h-80 rounded-2xl bg-slate-50 px-3 py-4">
+            <div className="mt-4 h-56 rounded-2xl bg-slate-50 px-3 py-4 sm:mt-5 sm:h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={normalCurveData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#d6d3d1" />
@@ -455,7 +479,7 @@ export default function HomePage() {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-500">하위 꼬리 확률</p>
                 <p className="mt-2 text-2xl font-semibold text-ink">{(result.var_95_tail_probability * 100).toFixed(0)}%</p>
@@ -471,7 +495,7 @@ export default function HomePage() {
             </div>
           </section>
 
-          <section className="mt-8 rounded-[30px] border border-white/70 bg-white/80 p-6 shadow-panel backdrop-blur">
+          <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Volatility Trend</p>
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
@@ -485,12 +509,12 @@ export default function HomePage() {
                 <p className="mt-2 text-2xl font-semibold text-ink">{formatPercent(result.portfolio_garch_volatility)}</p>
               </div>
             </div>
-            <div className="mt-5 h-80 rounded-2xl bg-slate-50 px-3 py-4">
+            <div className="mt-4 h-56 rounded-2xl bg-slate-50 px-3 py-4 sm:mt-5 sm:h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={portfolioVolatilitySeries}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#d6d3d1" />
-                  <XAxis dataKey="date" stroke="#64748b" />
-                  <YAxis tickFormatter={(value: number) => `${(value * 100).toFixed(0)}%`} stroke="#64748b" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                  <YAxis tickFormatter={(value: number) => `${(value * 100).toFixed(0)}%`} tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
                   <Tooltip
                     content={({ active, payload, label }) => {
                       const point = payload?.[0]?.payload as { date?: string } | undefined;
@@ -512,7 +536,7 @@ export default function HomePage() {
             </div>
           </section>
 
-          <section className="mt-8 rounded-[30px] border border-white/70 bg-white/80 p-6 shadow-panel backdrop-blur">
+          <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Drawdown</p>
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
@@ -526,12 +550,12 @@ export default function HomePage() {
                 <p className="mt-2 text-2xl font-semibold text-red-600">{formatPercent(result.max_drawdown)}</p>
               </div>
             </div>
-            <div className="mt-5 h-80 rounded-2xl bg-slate-50 px-3 py-4">
+            <div className="mt-4 h-56 rounded-2xl bg-slate-50 px-3 py-4 sm:mt-5 sm:h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={maxDrawdownSeries}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#d6d3d1" />
-                  <XAxis dataKey="date" stroke="#64748b" />
-                  <YAxis tickFormatter={(value: number) => `${(value * 100).toFixed(0)}%`} stroke="#64748b" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                  <YAxis tickFormatter={(value: number) => `${(value * 100).toFixed(0)}%`} tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
                   <Tooltip
                     content={({ active, payload, label }) => {
                       const point = payload?.[0]?.payload as { date?: string } | undefined;
@@ -553,7 +577,7 @@ export default function HomePage() {
             </div>
           </section>
 
-          <section className="mt-8 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <section className="mt-6 grid gap-4 sm:mt-8 sm:gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <div className="rounded-[30px] border border-white/70 bg-white/80 p-6 shadow-panel backdrop-blur">
               <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Weights</p>
               <h2 className="mt-2 text-2xl font-semibold text-ink">Market Value Weights</h2>
@@ -579,10 +603,7 @@ export default function HomePage() {
                 {result.assets.map((asset) => (
                   <div key={asset.asset} className="rounded-2xl bg-slate-50 px-4 py-3">
                     <div className="flex items-center justify-between gap-4">
-                      <div>
-                        <p className="font-medium text-ink">{asset.asset}</p>
-                        <p className="text-sm text-slate-500">{asset.price_currency}</p>
-                      </div>
+                      <p className="font-medium text-ink">{asset.asset}</p>
                       <p className="text-lg font-semibold text-ink">{formatPercent(asset.garch_volatility)}</p>
                     </div>
                   </div>
@@ -591,13 +612,14 @@ export default function HomePage() {
             </div>
           </section>
 
-          <section className="mt-8 rounded-[30px] border border-white/70 bg-white/80 p-6 shadow-panel backdrop-blur">
+          <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Trend</p>
-            <h2 className="mt-2 text-2xl font-semibold text-ink">정규화 가격 추이</h2>
-            <div className="mt-5 h-96">
+            <h2 className="mt-2 text-2xl font-semibold text-ink">자산 가치 추이</h2>
+            <div className="mt-4 h-64 sm:mt-5 sm:h-96">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={result.normalized_prices}>
+                <LineChart data={normalizedPricesForChart}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#d6d3d1" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                   <Tooltip />
                   <Legend />
                   {result.assets.map((asset, index) => (
@@ -608,6 +630,7 @@ export default function HomePage() {
                       stroke={PIE_COLORS[index % PIE_COLORS.length]}
                       strokeWidth={2.2}
                       dot={false}
+                      connectNulls={false}
                     />
                   ))}
                 </LineChart>
@@ -615,7 +638,7 @@ export default function HomePage() {
             </div>
           </section>
 
-          <section className="mt-8 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+          <section className="mt-6 grid gap-4 sm:mt-8 sm:gap-6 xl:grid-cols-[1.2fr_0.8fr]">
             <div className="overflow-hidden rounded-[30px] border border-white/70 bg-white/80 shadow-panel backdrop-blur">
               <div className="border-b border-slate-100 px-6 py-5">
                 <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Assets</p>
@@ -687,11 +710,11 @@ export default function HomePage() {
             </div>
           </section>
 
-          <section className="mt-8 rounded-[30px] border border-white/70 bg-white/80 p-6 shadow-panel backdrop-blur">
+          <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Risk Strategy Prep</p>
             <h2 className="mt-2 text-2xl font-semibold text-ink">리스크 대비 전략 분석</h2>
             <div className="mt-5 flex flex-col gap-3 text-base text-slate-700 lg:flex-row lg:items-center lg:gap-4">
-              <span>나는</span>
+              <span className="hidden lg:inline">나는</span>
               <select
                 value={selectedRiskFactorValue}
                 onChange={(event) => {
@@ -699,7 +722,7 @@ export default function HomePage() {
                   setRiskResult(null);
                   setRiskErrorMessage("");
                 }}
-                className="min-w-[280px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-ember"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-ember lg:w-auto lg:min-w-[280px]"
               >
                 {riskFactorOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -707,7 +730,7 @@ export default function HomePage() {
                   </option>
                 ))}
               </select>
-              <span>이</span>
+              <span className="hidden lg:inline">이</span>
               <select
                 value={riskDirection}
                 onChange={(event) => {
@@ -715,12 +738,12 @@ export default function HomePage() {
                   setRiskResult(null);
                   setRiskErrorMessage("");
                 }}
-                className="w-[120px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-ember"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-ember lg:w-[120px]"
               >
                 <option value="up">상승</option>
                 <option value="down">하락</option>
               </select>
-              <span>하는 리스크에 대비하고 싶어</span>
+              <span className="hidden lg:inline">하는 리스크에 대비하고 싶어</span>
             </div>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <button
@@ -739,7 +762,7 @@ export default function HomePage() {
             ) : null}
 
             {riskResult ? (
-              <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              <div className="mt-5 grid gap-3 sm:mt-6 sm:gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <div className="rounded-2xl bg-slate-50 px-4 py-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-500">포트폴리오와 대상자산의 상관계수</p>
                   <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.correlation, 3)}</p>

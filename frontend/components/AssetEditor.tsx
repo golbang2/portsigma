@@ -1,5 +1,7 @@
 ﻿"use client";
 
+import { useEffect } from "react";
+
 import { REPORT_CURRENCIES } from "@/lib/constants";
 import type { AssetDraft } from "@/lib/types";
 
@@ -7,13 +9,19 @@ type AssetEditorProps = {
   asset: AssetDraft;
   index: number;
   reportCurrency: string;
+  hideCsv?: boolean;
   onChange: (next: AssetDraft) => void;
   onRemove: () => void;
 };
 
-export function AssetEditor({ asset, index, reportCurrency, onChange, onRemove }: AssetEditorProps) {
+export function AssetEditor({ asset, index, reportCurrency, hideCsv = false, onChange, onRemove }: AssetEditorProps) {
+  useEffect(() => {
+    if (hideCsv && asset.source_type === "csv") {
+      onChange({ ...asset, source_type: "yahoo_finance" });
+    }
+  }, [hideCsv]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <section className="rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-panel backdrop-blur">
+    <section className="rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:rounded-[28px] sm:p-6">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Asset {index + 1}</p>
@@ -28,7 +36,7 @@ export function AssetEditor({ asset, index, reportCurrency, onChange, onRemove }
         </button>
       </div>
 
-      <div className="mt-5 grid gap-4 md:grid-cols-2">
+      <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4 md:grid-cols-2">
         <label className="flex flex-col gap-2 text-sm text-slate-700">
           자산명
           <input
@@ -46,7 +54,7 @@ export function AssetEditor({ asset, index, reportCurrency, onChange, onRemove }
             className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-ember"
           >
             <option value="yahoo_finance">Yahoo Finance</option>
-            <option value="csv">CSV 입력</option>
+            {!hideCsv && <option value="csv">CSV 입력</option>}
           </select>
         </label>
 
