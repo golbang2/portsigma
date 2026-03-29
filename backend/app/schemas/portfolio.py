@@ -12,27 +12,27 @@ RiskDirection = Literal["up", "down"]
 
 
 class AssetInput(BaseModel):
-    name: str = Field(min_length=1)
+    name: str = Field(min_length=1, max_length=100)
     source_type: PriceSource
-    ticker: str = ""
+    ticker: str = Field(default="", max_length=20)
     purchase_price: float = Field(ge=0)
     purchase_currency: str = Field(min_length=3, max_length=3)
     quantity: float = Field(gt=0)
-    csv_text: str = ""
+    csv_text: str = Field(default="", max_length=50_000)
 
 
 class AnalyzePortfolioRequest(BaseModel):
-    portfolio_name: str = "My Portfolio"
+    portfolio_name: str = Field(default="My Portfolio", max_length=100)
     report_currency: str = Field(min_length=3, max_length=3)
     period: SupportedPeriod = "5y"
-    assets: list[AssetInput] = Field(min_length=1)
+    assets: list[AssetInput] = Field(min_length=1, max_length=10)
 
 
 class RiskStrategyRequest(BaseModel):
-    portfolio_name: str = "My Portfolio"
+    portfolio_name: str = Field(default="My Portfolio", max_length=100)
     report_currency: str = Field(min_length=3, max_length=3)
     period: SupportedPeriod = "5y"
-    assets: list[AssetInput] = Field(min_length=1)
+    assets: list[AssetInput] = Field(min_length=1, max_length=10)
     factor_type: RiskFactorType
     factor_id: str = Field(min_length=1)
     factor_label: str = Field(min_length=1)
