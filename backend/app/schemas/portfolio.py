@@ -25,14 +25,14 @@ class AnalyzePortfolioRequest(BaseModel):
     portfolio_name: str = Field(default="My Portfolio", max_length=100)
     report_currency: str = Field(min_length=3, max_length=3)
     period: SupportedPeriod = "5y"
-    assets: list[AssetInput] = Field(min_length=1, max_length=10)
+    assets: list[AssetInput] = Field(min_length=1, max_length=15)
 
 
 class RiskStrategyRequest(BaseModel):
     portfolio_name: str = Field(default="My Portfolio", max_length=100)
     report_currency: str = Field(min_length=3, max_length=3)
     period: SupportedPeriod = "5y"
-    assets: list[AssetInput] = Field(min_length=1, max_length=10)
+    assets: list[AssetInput] = Field(min_length=1, max_length=15)
     factor_type: RiskFactorType
     factor_id: str = Field(min_length=1)
     factor_label: str = Field(min_length=1)
