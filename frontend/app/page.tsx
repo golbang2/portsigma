@@ -117,6 +117,8 @@ export default function HomePage() {
   const [recommendation, setRecommendation] = useState("");
   const [isRecommending, setIsRecommending] = useState(false);
   const [recommendError, setRecommendError] = useState("");
+  const [openaiApiKey, setOpenaiApiKey] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const uploadRef = useRef<HTMLInputElement | null>(null);
 
@@ -127,6 +129,20 @@ export default function HomePage() {
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
   }, []);
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem("openai_api_key");
+    if (saved) setOpenaiApiKey(saved);
+  }, []);
+
+  function handleApiKeyChange(value: string) {
+    setOpenaiApiKey(value);
+    if (value) {
+      sessionStorage.setItem("openai_api_key", value);
+    } else {
+      sessionStorage.removeItem("openai_api_key");
+    }
+  }
 
   function resetRiskAnalysis() {
     setRiskResult(null);
@@ -150,6 +166,7 @@ export default function HomePage() {
       hedge_ratio: riskResult.hedge_ratio,
       portfolio_volatility: riskResult.portfolio_volatility,
       factor_volatility: riskResult.factor_volatility,
+      openai_api_key: openaiApiKey || undefined,
     };
     try {
       await streamStrategyRecommendation(payload, (chunk) =>
@@ -851,6 +868,31 @@ export default function HomePage() {
                   >
                     {isRecommending ? "추천 생성 중..." : "전략 추천받기"}
                   </button>
+                </div>
+
+                <div className="mt-4">
+                  <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                    OpenAI API Key
+                    <span className="ml-1 font-normal text-slate-400">(세션 동안 저장됩니다)</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type={showApiKey ? "text" : "password"}
+                      value={openaiApiKey}
+                      onChange={(e) => handleApiKeyChange(e.target.value)}
+                      placeholder="sk-..."
+                      autoComplete="off"
+                      spellCheck={false}
+                      className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-700 placeholder-slate-300 outline-none focus:border-pine focus:ring-1 focus:ring-pine"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey((v) => !v)}
+                      className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-500 hover:bg-slate-50"
+                    >
+                      {showApiKey ? "숨기기" : "보기"}
+                    </button>
+                  </div>
                 </div>
 
                 {recommendError ? (

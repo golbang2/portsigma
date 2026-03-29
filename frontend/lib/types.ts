@@ -84,6 +84,7 @@ export type StrategyRecommendRequest = {
   hedge_ratio: number | null;
   portfolio_volatility: number | null;
   factor_volatility: number | null;
+  openai_api_key?: string;
 };
 
 export type RiskStrategyResponse = {

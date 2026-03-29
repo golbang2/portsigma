@@ -111,3 +111,4 @@ class StrategyRecommendRequest(BaseModel):
     hedge_ratio: float | None = None
     portfolio_volatility: float | None = None
     factor_volatility: float | None = None
+    openai_api_key: str | None = None

@@ -29,16 +29,16 @@ def _format_value(v: float | None, as_percent: bool = False, decimals: int = 3) 
 
 
 def stream_strategy_recommendation(payload: StrategyRecommendRequest) -> Iterator[str]:
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = payload.openai_api_key or os.getenv("OPENAI_API_KEY")
     if not api_key:
-        raise ValueError("OPENAI_API_KEY 환경변수가 설정되지 않았습니다.")
+        raise ValueError("OpenAI API 키가 필요합니다. 키를 입력해주세요.")
 
     direction_label = "상승" if payload.direction == "up" else "하락"
     query = (
         f"{payload.factor_label} {direction_label} 리스크 헤지 전략 "
         f"베타 {_format_value(payload.beta)} 상관계수 {_format_value(payload.correlation)}"
     )
-    docs = retrieve(query)
+    docs = retrieve(query, api_key=api_key)
     docs_text = "\n\n---\n\n".join(docs) if docs else "관련 문서를 찾지 못했습니다."
 
     user_message = f"""## 포트폴리오 분석 결과
@@ -59,7 +59,7 @@ def stream_strategy_recommendation(payload: StrategyRecommendRequest) -> Iterato
 
 위 분석 결과를 바탕으로 구체적이고 실행 가능한 헤지 전략을 추천해주세요."""
 
-    client = OpenAI(api_key=api_key)
+    client = OpenAI(api_key=api_key)  # noqa: S106 — key from user input, not hardcoded
     stream = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[

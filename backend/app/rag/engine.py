@@ -15,11 +15,11 @@ _lock = threading.Lock()
 _collection: chromadb.Collection | None = None
 
 
-def _get_openai_client() -> OpenAI:
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise ValueError("OPENAI_API_KEY 환경변수가 설정되지 않았습니다.")
-    return OpenAI(api_key=api_key)
+def _get_openai_client(api_key: str | None = None) -> OpenAI:
+    key = api_key or os.getenv("OPENAI_API_KEY")
+    if not key:
+        raise ValueError("OpenAI API 키가 필요합니다. 키를 입력해주세요.")
+    return OpenAI(api_key=key)
 
 
 def _embed(client: OpenAI, texts: list[str]) -> list[list[float]]:
@@ -37,7 +37,7 @@ def _load_chunks() -> list[dict[str, str]]:
     return chunks
 
 
-def _get_collection() -> chromadb.Collection:
+def _get_collection(api_key: str | None = None) -> chromadb.Collection:
     global _collection
     with _lock:
         if _collection is not None:
@@ -47,7 +47,7 @@ def _get_collection() -> chromadb.Collection:
         if col.count() == 0:
             chunks = _load_chunks()
             if chunks:
-                oai = _get_openai_client()
+                oai = _get_openai_client(api_key)
                 embeddings = _embed(oai, [c["text"] for c in chunks])
                 col.add(
                     ids=[c["id"] for c in chunks],
@@ -59,9 +59,9 @@ def _get_collection() -> chromadb.Collection:
         return _collection
 
 
-def retrieve(query: str, n_results: int = 6) -> list[str]:
-    col = _get_collection()
-    oai = _get_openai_client()
+def retrieve(query: str, n_results: int = 6, api_key: str | None = None) -> list[str]:
+    col = _get_collection(api_key)
+    oai = _get_openai_client(api_key)
     query_embedding = _embed(oai, [query])[0]
     count = col.count()
     if count == 0:
