@@ -18,9 +18,11 @@ import {
   YAxis
 } from "recharts";
 
+import ReactMarkdown from "react-markdown";
+
 import { AssetEditor } from "@/components/AssetEditor";
 import { MetricCard } from "@/components/MetricCard";
-import { analyzePortfolio, analyzeRiskStrategy } from "@/lib/api";
+import { analyzePortfolio, analyzeRiskStrategy, streamStrategyRecommendation } from "@/lib/api";
 import { DEFAULT_PRICE_CSV, HISTORY_PERIODS, MAJOR_INDEX_OPTIONS, REPORT_CURRENCIES } from "@/lib/constants";
 import { assetsToPortfolioCsv, parsePortfolioCsv } from "@/lib/portfolio-csv";
 import type {
@@ -29,7 +31,8 @@ import type {
   HistoryPeriod,
   RiskDirection,
   RiskFactorType,
-  RiskStrategyResponse
+  RiskStrategyResponse,
+  StrategyRecommendRequest
 } from "@/lib/types";
 
 type RiskFactorOption = {
@@ -111,6 +114,9 @@ export default function HomePage() {
   const [riskResult, setRiskResult] = useState<RiskStrategyResponse | null>(null);
   const [riskErrorMessage, setRiskErrorMessage] = useState("");
   const [isRiskLoading, setIsRiskLoading] = useState(false);
+  const [recommendation, setRecommendation] = useState("");
+  const [isRecommending, setIsRecommending] = useState(false);
+  const [recommendError, setRecommendError] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const uploadRef = useRef<HTMLInputElement | null>(null);
 
@@ -125,6 +131,35 @@ export default function HomePage() {
   function resetRiskAnalysis() {
     setRiskResult(null);
     setRiskErrorMessage("");
+    setRecommendation("");
+    setRecommendError("");
+  }
+
+  async function handleRecommend() {
+    if (!riskResult || !selectedRiskFactor) return;
+    setIsRecommending(true);
+    setRecommendation("");
+    setRecommendError("");
+    const payload: StrategyRecommendRequest = {
+      portfolio_name: portfolioName,
+      report_currency: reportCurrency,
+      factor_label: riskResult.factor_label,
+      direction: riskResult.direction,
+      correlation: riskResult.correlation,
+      beta: riskResult.beta,
+      hedge_ratio: riskResult.hedge_ratio,
+      portfolio_volatility: riskResult.portfolio_volatility,
+      factor_volatility: riskResult.factor_volatility,
+    };
+    try {
+      await streamStrategyRecommendation(payload, (chunk) =>
+        setRecommendation((prev) => prev + chunk)
+      );
+    } catch (error) {
+      setRecommendError(error instanceof Error ? error.message : "전략 추천에 실패했습니다.");
+    } finally {
+      setIsRecommending(false);
+    }
   }
 
   async function handleAnalyze() {
@@ -305,7 +340,7 @@ export default function HomePage() {
             <span className="text-ember">한 번에 보는 포트폴리오 대시보드</span>
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-500">
-            Yahoo Finance 가격 이력 · 환율 변환 · GARCH 변동성 분석을 한 화면에서 확인하세요.
+            내 주식·코인·펀드를 한 곳에 모아 수익률, 위험도, 통화별 환산까지 한눈에 파악하세요.
           </p>
         </div>
 
@@ -501,7 +536,7 @@ export default function HomePage() {
               <div>
                 <h2 className="mt-2 text-2xl font-semibold text-ink">포트폴리오 변동성</h2>
                 <p className="mt-3 text-sm leading-7 text-slate-600">
-                  포트폴리오 일간 수익률에 GARCH를 적용한 조건부 변동성의 흐름입니다.
+                  포트폴리오 연간 변동성 변화 추이입니다.
                 </p>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
@@ -653,7 +688,7 @@ export default function HomePage() {
                       <th className="px-4 py-3">평가금액</th>
                       <th className="px-4 py-3">비중</th>
                       <th className="px-4 py-3">손익</th>
-                      <th className="px-4 py-3">σ</th>
+                      <th className="px-4 py-3">변동성</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -798,6 +833,48 @@ export default function HomePage() {
                 {riskResult.warnings.map((warning) => (
                   <p key={warning}>{warning}</p>
                 ))}
+              </div>
+            ) : null}
+
+            {riskResult ? (
+              <div className="mt-6 border-t border-slate-100 pt-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.24em] text-slate-500">AI Strategy</p>
+                    <h3 className="mt-1 text-lg font-semibold text-ink">AI 헤지 전략 추천</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRecommend}
+                    disabled={isRecommending}
+                    className="rounded-full bg-pine px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isRecommending ? "추천 생성 중..." : "전략 추천받기"}
+                  </button>
+                </div>
+
+                {recommendError ? (
+                  <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {recommendError}
+                  </div>
+                ) : null}
+
+                {(recommendation || isRecommending) ? (
+                  <div className="mt-4 rounded-2xl bg-slate-50 px-5 py-5 text-sm leading-7 text-slate-700
+                    [&_h1]:mb-2 [&_h1]:mt-4 [&_h1]:text-base [&_h1]:font-semibold [&_h1]:text-ink
+                    [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-ink
+                    [&_h3]:mb-1 [&_h3]:mt-3 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-ink
+                    [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5
+                    [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5
+                    [&_li]:my-0.5
+                    [&_strong]:font-semibold [&_strong]:text-ink
+                    [&_p]:my-1.5">
+                    <ReactMarkdown>{recommendation}</ReactMarkdown>
+                    {isRecommending ? (
+                      <span className="inline-block h-4 w-0.5 animate-pulse bg-slate-400" />
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </section>

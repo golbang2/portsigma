@@ -99,3 +99,15 @@ class RiskStrategyResponse(BaseModel):
     portfolio_volatility: float | None = None
     factor_volatility: float | None = None
     warnings: list[str]
+
+
+class StrategyRecommendRequest(BaseModel):
+    portfolio_name: str = "My Portfolio"
+    report_currency: str = Field(min_length=3, max_length=3)
+    factor_label: str = Field(min_length=1)
+    direction: RiskDirection
+    correlation: float | None = None
+    beta: float | None = None
+    hedge_ratio: float | None = None
+    portfolio_volatility: float | None = None
+    factor_volatility: float | None = None

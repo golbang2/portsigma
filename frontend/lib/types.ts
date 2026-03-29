@@ -74,6 +74,18 @@ export type AnalyzeResponse = {
   max_drawdown: number | null;
 };
 
+export type StrategyRecommendRequest = {
+  portfolio_name: string;
+  report_currency: string;
+  factor_label: string;
+  direction: RiskDirection;
+  correlation: number | null;
+  beta: number | null;
+  hedge_ratio: number | null;
+  portfolio_volatility: number | null;
+  factor_volatility: number | null;
+};
+
 export type RiskStrategyResponse = {
   portfolio_name: string;
   report_currency: string;
