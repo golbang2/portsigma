@@ -151,6 +151,7 @@ export default function HomePage() {
   const [showApiKey, setShowApiKey] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const uploadRef = useRef<HTMLInputElement | null>(null);
+  const draftLoadedRef = useRef(false);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 639px)");
@@ -164,6 +165,33 @@ export default function HomePage() {
     const saved = sessionStorage.getItem("openai_api_key");
     if (saved) setOpenaiApiKey(saved);
   }, []);
+
+  // Restore draft from localStorage on first load
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("portsigma_draft");
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (draft.portfolioName) setPortfolioName(draft.portfolioName);
+        if (draft.reportCurrency) setReportCurrency(draft.reportCurrency);
+        if (draft.period) setPeriod(draft.period);
+        if (Array.isArray(draft.assets) && draft.assets.length > 0) setAssets(draft.assets);
+      }
+    } catch {
+      // corrupted storage — ignore
+    }
+    draftLoadedRef.current = true;
+  }, []);
+
+  // Auto-save draft to localStorage whenever inputs change
+  useEffect(() => {
+    if (!draftLoadedRef.current) return;
+    try {
+      localStorage.setItem("portsigma_draft", JSON.stringify({ portfolioName, reportCurrency, period, assets }));
+    } catch {
+      // storage quota exceeded — ignore
+    }
+  }, [portfolioName, reportCurrency, period, assets]);
 
   function handleApiKeyChange(value: string) {
     setOpenaiApiKey(value);
@@ -247,6 +275,19 @@ export default function HomePage() {
   function removeAsset(id: string) {
     resetRiskAnalysis();
     setAssets((current) => (current.length > 1 ? current.filter((asset) => asset.id !== id) : current));
+  }
+
+  function resetDraft() {
+    const fresh = [createAsset(0), createAsset(1), createAsset(2)];
+    setPortfolioName("My Portfolio");
+    setReportCurrency("KRW");
+    setPeriod("5y");
+    setAssets(fresh);
+    setResult(null);
+    setWarnings([]);
+    setErrorMessage("");
+    resetRiskAnalysis();
+    try { localStorage.removeItem("portsigma_draft"); } catch { /* ignore */ }
   }
 
   function downloadPortfolioCsv() {
@@ -461,6 +502,13 @@ export default function HomePage() {
             className="rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
           >
             자산 추가
+          </button>
+          <button
+            type="button"
+            onClick={resetDraft}
+            className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-500 transition hover:border-red-300 hover:text-red-500"
+          >
+            초기화
           </button>
           <button
             type="button"
