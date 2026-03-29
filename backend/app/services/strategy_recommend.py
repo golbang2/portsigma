@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import os
 from collections.abc import Iterator
@@ -9,15 +9,17 @@ from app.rag.engine import retrieve
 from app.schemas.portfolio import StrategyRecommendRequest
 
 SYSTEM_PROMPT = """당신은 포트폴리오 리스크 관리 전문가입니다.
-사용자의 포트폴리오 분석 결과와 참고 전략 문서를 바탕으로 실용적인 헤지 전략을 한국어로 추천해주세요.
+사용자의 포트폴리오 분석 결과와 참고 전략 문서를 바탕으로 교육적이고 일반적인 헤지 아이디어를 한국어로 제시해주세요.
 
 다음 형식으로 답변해주세요:
 1. 현재 상황 요약 (2-3문장)
-2. 추천 헤지 전략 (구체적인 수단과 비율 포함)
-3. 실행 방법 (단계별)
+2. 가능한 헤지 방향 (자산군 또는 수단 범주 중심)
+3. 실행 시 고려할 점
 4. 주의사항
 
-전문 용어는 괄호 안에 한글 설명을 추가하고, 구체적인 ETF 종목이나 수단을 제시해주세요."""
+전문 용어는 괄호 안에 한글 설명을 추가해주세요.
+특정 종목명, 개별 ETF 티커, 특정 상품명, 매수 지시형 표현은 사용하지 말고,
+지수 인버스형 수단, 채권형 자산, 금 관련 자산, 옵션 기반 방어 전략처럼 일반적인 범주 수준으로만 설명해주세요."""
 
 
 def _format_value(v: float | None, as_percent: bool = False, decimals: int = 3) -> str:
@@ -57,7 +59,8 @@ def stream_strategy_recommendation(payload: StrategyRecommendRequest) -> Iterato
 
 {docs_text}
 
-위 분석 결과를 바탕으로 구체적이고 실행 가능한 헤지 전략을 추천해주세요."""
+위 분석 결과를 바탕으로 일반적인 헤지 방향과 고려 요소를 설명해주세요.
+특정 종목명이나 개별 상품명을 직접 추천하지 말고 범주 수준에서만 제안해주세요."""
 
     client = OpenAI(api_key=api_key)  # noqa: S106 — key from user input, not hardcoded
     stream = client.chat.completions.create(
