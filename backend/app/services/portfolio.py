@@ -3,6 +3,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from io import StringIO
+import time
 
 import pandas as pd
 
@@ -181,14 +182,16 @@ def build_portfolio_context(payload: AnalyzePortfolioRequest | RiskStrategyReque
     asset_rows: list[dict[str, float | str]] = []
     warnings: list[str] = []
 
-    # Fetch all assets in parallel to avoid sequential Yahoo Finance latency on Render.
+    # Fetch assets in parallel with a small stagger between submissions to avoid
+    # hitting Yahoo Finance rate limits (429) from simultaneous bursts.
     # Results are collected in submission order to preserve asset ordering.
     max_workers = min(len(payload.assets), 8)
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [
-            executor.submit(_fetch_asset, asset, report_currency, payload.period)
-            for asset in payload.assets
-        ]
+        futures = []
+        for i, asset in enumerate(payload.assets):
+            if i > 0:
+                time.sleep(0.3)
+            futures.append(executor.submit(_fetch_asset, asset, report_currency, payload.period))
         fetch_results = [f.result() for f in futures]
 
     for result, warning in fetch_results:
