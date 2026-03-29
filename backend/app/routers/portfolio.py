@@ -20,7 +20,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/portfolio/analyze", response_model=AnalyzePortfolioResponse)
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 def analyze_portfolio_endpoint(request: Request, payload: AnalyzePortfolioRequest) -> AnalyzePortfolioResponse:
     try:
         return analyze_portfolio(payload)
@@ -29,7 +29,7 @@ def analyze_portfolio_endpoint(request: Request, payload: AnalyzePortfolioReques
 
 
 @router.post("/portfolio/risk-strategy", response_model=RiskStrategyResponse)
-@limiter.limit("20/minute")
+@limiter.limit("10/minute")
 def analyze_risk_strategy_endpoint(request: Request, payload: RiskStrategyRequest) -> RiskStrategyResponse:
     try:
         return analyze_risk_strategy(payload)
@@ -38,7 +38,7 @@ def analyze_risk_strategy_endpoint(request: Request, payload: RiskStrategyReques
 
 
 @router.post("/portfolio/strategy-recommend")
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 def strategy_recommend_endpoint(request: Request, payload: StrategyRecommendRequest) -> StreamingResponse:
     api_key = payload.openai_api_key or os.getenv("OPENAI_API_KEY")
     if not api_key:
