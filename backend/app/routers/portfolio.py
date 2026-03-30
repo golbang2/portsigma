@@ -1,6 +1,6 @@
 import os
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -12,11 +12,18 @@ from app.schemas.portfolio import (
     RiskStrategyResponse,
     StrategyRecommendRequest,
 )
+from app.services.market_data import search_ticker
 from app.services.portfolio import analyze_portfolio, analyze_risk_strategy
 from app.services.strategy_recommend import stream_strategy_recommendation
 
 router = APIRouter(tags=["portfolio"])
 limiter = Limiter(key_func=get_remote_address)
+
+
+@router.get("/portfolio/search-ticker")
+@limiter.limit("60/minute")
+def search_ticker_endpoint(request: Request, q: str = Query(min_length=1, max_length=100)) -> list[dict]:
+    return search_ticker(q)
 
 
 @router.post("/portfolio/analyze", response_model=AnalyzePortfolioResponse)

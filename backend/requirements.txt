@@ -5,6 +5,7 @@ pydantic>=2.11.0
 pandas>=2.2.3
 numpy>=2.2.4
 yfinance>=0.2.54
+requests>=2.32.0
 arch>=7.0.0
 python-multipart>=0.0.20
 openai>=1.54.0

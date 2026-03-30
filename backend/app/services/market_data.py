@@ -1,9 +1,68 @@
 from __future__ import annotations
 
+import json
+import re
 from functools import lru_cache
+from pathlib import Path
 
 import pandas as pd
 import yfinance as yf
+
+_KR_STOCKS_PATH = Path(__file__).parent.parent / "data" / "kr_stocks.json"
+
+
+@lru_cache(maxsize=1)
+def _load_kr_stocks() -> list[dict]:
+    with _KR_STOCKS_PATH.open(encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _is_korean(text: str) -> bool:
+    return bool(re.search(r"[가-힣]", text))
+
+
+def _search_kr_static(query: str) -> list[dict]:
+    stocks = _load_kr_stocks()
+    query_lower = query.lower()
+    results = []
+    for s in stocks:
+        if query_lower in s["name"].lower() or query_lower in s["code"]:
+            suffix = ".KQ" if s["market"] == "KOSDAQ" else ".KS"
+            results.append({
+                "symbol": f"{s['code']}{suffix}",
+                "name": s["name"],
+                "type": "ETF" if s["name"].startswith(("KODEX", "TIGER", "KBSTAR", "ARIRANG", "HANARO", "SOL")) else "EQUITY",
+                "exchange": s["market"],
+            })
+        if len(results) >= 8:
+            break
+    return results
+
+
+def _search_yahoo(query: str) -> list[dict]:
+    try:
+        quotes = yf.Search(query, max_results=8, news_count=0).quotes
+    except Exception:  # noqa: BLE001
+        return []
+    output = []
+    for r in quotes:
+        symbol = r.get("symbol", "")
+        if not symbol:
+            continue
+        name = r.get("shortname") or r.get("longname") or symbol
+        output.append({
+            "symbol": symbol,
+            "name": name,
+            "type": r.get("quoteType", ""),
+            "exchange": r.get("exchange", ""),
+        })
+    return output
+
+
+def search_ticker(query: str) -> list[dict]:
+    if _is_korean(query):
+        return _search_kr_static(query)
+    return _search_yahoo(query)
 
 
 @lru_cache(maxsize=256)

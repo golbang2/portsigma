@@ -1,10 +1,27 @@
 ﻿import type { AnalyzeRequest, AnalyzeResponse, RiskStrategyRequest, RiskStrategyResponse, StrategyRecommendRequest } from "@/lib/types";
 
+export type TickerSearchResult = {
+  symbol: string;
+  name: string;
+  type: string;
+  exchange: string;
+};
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 async function parseError(response: Response) {
   const detail = await response.text();
   throw new Error(detail || "Request failed.");
+}
+
+export async function searchTicker(q: string): Promise<TickerSearchResult[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/portfolio/search-ticker?q=${encodeURIComponent(q)}`);
+    if (!response.ok) return [];
+    return response.json() as Promise<TickerSearchResult[]>;
+  } catch {
+    return [];
+  }
 }
 
 export async function analyzePortfolio(payload: AnalyzeRequest): Promise<AnalyzeResponse> {
