@@ -22,7 +22,7 @@ import ReactMarkdown from "react-markdown";
 
 import { AssetEditor } from "@/components/AssetEditor";
 import { MetricCard } from "@/components/MetricCard";
-import { analyzePortfolio, analyzeRiskStrategy, streamStrategyRecommendation } from "@/lib/api";
+import { analyzePortfolio, analyzeRiskStrategy, streamStrategyRecommendation, warmupBackend } from "@/lib/api";
 import { DEFAULT_PRICE_CSV, HISTORY_PERIODS, MAJOR_INDEX_OPTIONS, REPORT_CURRENCIES } from "@/lib/constants";
 import { assetsToPortfolioCsv, parsePortfolioCsv } from "@/lib/portfolio-csv";
 import type {
@@ -151,8 +151,13 @@ export default function HomePage() {
   const [openaiApiKey, setOpenaiApiKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [backendReady, setBackendReady] = useState<boolean | null>(null);
   const uploadRef = useRef<HTMLInputElement | null>(null);
   const draftLoadedRef = useRef(false);
+
+  useEffect(() => {
+    warmupBackend().then(setBackendReady);
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 639px)");
@@ -435,6 +440,23 @@ export default function HomePage() {
           <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-500">
             내 주식·코인·펀드를 한 곳에 모아 수익률, 위험도, 통화별 환산까지 한눈에 파악하세요.
           </p>
+          {backendReady === null && (
+            <div className="mt-4 flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
+              <svg className="h-4 w-4 shrink-0 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+              서버 시작 중입니다. 처음 검색·분석은 잠시 기다려 주세요.
+            </div>
+          )}
+          {backendReady === false && (
+            <div className="mt-4 flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
+              <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+              </svg>
+              서버 응답이 늦습니다. 검색·분석이 안 될 경우 잠시 후 다시 시도해 주세요.
+            </div>
+          )}
         </div>
 
         {/* 설정 */}

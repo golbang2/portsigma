@@ -14,13 +14,23 @@ async function parseError(response: Response) {
   throw new Error(detail || "Request failed.");
 }
 
-export async function searchTicker(q: string): Promise<TickerSearchResult[]> {
+export async function warmupBackend(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/health`);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// null = network/server error, [] = no results, TickerSearchResult[] = success
+export async function searchTicker(q: string): Promise<TickerSearchResult[] | null> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/portfolio/search-ticker?q=${encodeURIComponent(q)}`);
-    if (!response.ok) return [];
+    if (!response.ok) return null;
     return response.json() as Promise<TickerSearchResult[]>;
   } catch {
-    return [];
+    return null;
   }
 }
 

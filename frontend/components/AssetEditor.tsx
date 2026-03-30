@@ -27,6 +27,7 @@ const QUOTE_TYPE_LABEL: Record<string, string> = {
 export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove }: AssetEditorProps) {
   const [results, setResults] = useState<TickerSearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -54,13 +55,21 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
     if (value.length < 1) {
       setResults([]);
       setIsOpen(false);
+      setSearchError(false);
       return;
     }
 
     searchTimer.current = setTimeout(async () => {
       const data = await searchTicker(value);
-      setResults(data);
-      setIsOpen(data.length > 0);
+      if (data === null) {
+        setResults([]);
+        setSearchError(true);
+        setIsOpen(true);
+      } else {
+        setSearchError(false);
+        setResults(data);
+        setIsOpen(data.length > 0);
+      }
     }, 300);
   }
 
@@ -102,26 +111,32 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
               />
               {isOpen && (
                 <ul className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg">
-                  {results.map((r) => (
-                    <li key={r.symbol}>
-                      <button
-                        type="button"
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          handleSelect(r);
-                        }}
-                        className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-slate-50"
-                      >
-                        <span className="font-mono text-sm font-semibold text-ink">{r.symbol}</span>
-                        <span className="flex-1 truncate text-sm text-slate-600">{r.name}</span>
-                        {r.type && (
-                          <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
-                            {QUOTE_TYPE_LABEL[r.type] ?? r.type}
-                          </span>
-                        )}
-                      </button>
+                  {searchError ? (
+                    <li className="px-4 py-3 text-sm text-amber-600">
+                      서버가 시작 중입니다. 잠시 후 다시 시도해 주세요.
                     </li>
-                  ))}
+                  ) : (
+                    results.map((r) => (
+                      <li key={r.symbol}>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSelect(r);
+                          }}
+                          className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-slate-50"
+                        >
+                          <span className="font-mono text-sm font-semibold text-ink">{r.symbol}</span>
+                          <span className="flex-1 truncate text-sm text-slate-600">{r.name}</span>
+                          {r.type && (
+                            <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                              {QUOTE_TYPE_LABEL[r.type] ?? r.type}
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    ))
+                  )}
                 </ul>
               )}
             </div>
