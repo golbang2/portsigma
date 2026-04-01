@@ -23,6 +23,7 @@ import ReactMarkdown from "react-markdown";
 import { AssetEditor } from "@/components/AssetEditor";
 import { MetricCard } from "@/components/MetricCard";
 import { analyzePortfolio, analyzeRiskStrategy, streamStrategyRecommendation, warmupBackend } from "@/lib/api";
+import { useLang } from "@/lib/language-context";
 import { DEFAULT_PRICE_CSV, HISTORY_PERIODS, MAJOR_INDEX_OPTIONS, REPORT_CURRENCIES } from "@/lib/constants";
 import { assetsToPortfolioCsv, parsePortfolioCsv } from "@/lib/portfolio-csv";
 import type {
@@ -131,6 +132,7 @@ function buildNormalCurveData(mean: number | null, std: number | null, cutoff: n
 const PIE_COLORS = ["#f97316", "#0f766e", "#0284c7", "#dc2626", "#7c3aed", "#ca8a04", "#14b8a6"];
 
 export default function HomePage() {
+  const { t, toggleLang } = useLang();
   const [portfolioName, setPortfolioName] = useState("My Portfolio");
   const [reportCurrency, setReportCurrency] = useState("KRW");
   const [period, setPeriod] = useState<HistoryPeriod>("5y");
@@ -240,10 +242,10 @@ export default function HomePage() {
         setRecommendation((prev) => prev + chunk);
       });
       if (!received) {
-        setRecommendError("응답을 받지 못했습니다. API 키를 확인하거나 다시 시도해주세요.");
+        setRecommendError(t.errNoResponse);
       }
     } catch (error) {
-      setRecommendError(error instanceof Error ? error.message : "전략 추천에 실패했습니다.");
+      setRecommendError(error instanceof Error ? error.message : t.errRecommend);
     } finally {
       setIsRecommending(false);
     }
@@ -263,7 +265,7 @@ export default function HomePage() {
       setResult(response);
       setWarnings(response.warnings);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "분석 요청에 실패했습니다.");
+      setErrorMessage(error instanceof Error ? error.message : t.errAnalyze);
     } finally {
       setIsLoading(false);
     }
@@ -321,7 +323,7 @@ export default function HomePage() {
       setErrorMessage("");
       resetRiskAnalysis();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "포트폴리오 CSV를 읽지 못했습니다.");
+      setErrorMessage(error instanceof Error ? error.message : t.errLoadCsv);
     } finally {
       if (uploadRef.current) {
         uploadRef.current.value = "";
@@ -373,7 +375,7 @@ export default function HomePage() {
         value: `asset_fx:${asset.asset}`,
         factorType: "asset_fx" as const,
         factorId: asset.asset,
-        label: `${asset.asset} 환율 (${asset.price_currency}/${result.report_currency})`
+        label: `${asset.asset} ${t.fxRate} (${asset.price_currency}/${result.report_currency})`
       }));
 
     const assetOptions = result.assets.map((asset) => ({
@@ -422,7 +424,7 @@ export default function HomePage() {
       });
       setRiskResult(response);
     } catch (error) {
-      setRiskErrorMessage(error instanceof Error ? error.message : "리스크 대비 전략 분석에 실패했습니다.");
+      setRiskErrorMessage(error instanceof Error ? error.message : t.errRiskAnalyze);
     } finally {
       setIsRiskLoading(false);
     }
@@ -433,20 +435,31 @@ export default function HomePage() {
       <section className="rounded-[28px] border border-white/70 bg-white/75 p-5 shadow-panel backdrop-blur sm:rounded-[36px] sm:p-8">
         {/* 히어로 */}
         <div className="border-b border-slate-100 pb-5 sm:pb-7">
-          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-ember">Portsigma</p>
-          <h1 className="mt-3 text-3xl font-semibold leading-tight text-ink sm:text-4xl md:text-5xl">
-            포트폴리오 위험관리 대시보드
-          </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-500">
-            내 주식·코인·펀드를 한 곳에 모아 수익률, 위험도, 통화별 환산까지 한눈에 파악하세요.
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-ember">Portsigma</p>
+              <h1 className="mt-3 text-3xl font-semibold leading-tight text-ink sm:text-4xl md:text-5xl">
+                {t.heroTitle}
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-500">
+                {t.heroDesc}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={toggleLang}
+              className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-ember hover:text-ember"
+            >
+              {t.langToggle}
+            </button>
+          </div>
           {backendReady === null && (
             <div className="mt-4 flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
               <svg className="h-4 w-4 shrink-0 animate-spin" viewBox="0 0 24 24" fill="none">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
               </svg>
-              서버 시작 중입니다. 처음 검색·분석은 잠시 기다려 주세요.
+              {t.serverStarting}
             </div>
           )}
           {backendReady === false && (
@@ -454,7 +467,7 @@ export default function HomePage() {
               <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
               </svg>
-              서버 응답이 늦습니다. 검색·분석이 안 될 경우 잠시 후 다시 시도해 주세요.
+              {t.serverSlow}
             </div>
           )}
         </div>
@@ -462,7 +475,7 @@ export default function HomePage() {
         {/* 설정 */}
         <div className="mt-5 grid grid-cols-1 gap-3 sm:mt-6 sm:grid-cols-2 sm:gap-4 md:grid-cols-4">
           <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-500">
-            포트폴리오 이름
+            {t.portfolioName}
             <input
               value={portfolioName}
               onChange={(event) => {
@@ -473,7 +486,7 @@ export default function HomePage() {
             />
           </label>
           <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-500">
-            기준 통화
+            {t.reportCurrency}
             <select
               value={reportCurrency}
               onChange={(event) => {
@@ -490,7 +503,7 @@ export default function HomePage() {
             </select>
           </label>
           <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-500">
-            조회 기간
+            {t.period}
             <select
               value={period}
               onChange={(event) => {
@@ -507,7 +520,7 @@ export default function HomePage() {
             </select>
           </label>
           <label className="hidden flex-col gap-1.5 text-xs font-medium text-slate-500 sm:flex">
-            포트폴리오 CSV 불러오기
+            {t.loadCsv}
             <input
               ref={uploadRef}
               type="file"
@@ -525,21 +538,21 @@ export default function HomePage() {
             onClick={addAsset}
             className="rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
           >
-            자산 추가
+            {t.addAsset}
           </button>
           <button
             type="button"
             onClick={resetDraft}
             className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-500 transition hover:border-red-300 hover:text-red-500"
           >
-            초기화
+            {t.reset}
           </button>
           <button
             type="button"
             onClick={downloadPortfolioCsv}
             className="hidden rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:border-ember hover:text-ember sm:inline-flex"
           >
-            CSV 저장
+            {t.saveCsv}
           </button>
           <button
             type="button"
@@ -547,7 +560,7 @@ export default function HomePage() {
             disabled={isLoading}
             className="ml-auto rounded-full bg-ember px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isLoading ? "분석 중..." : "분석 실행"}
+            {isLoading ? t.analyzing : t.runAnalysis}
           </button>
         </div>
       </section>
@@ -578,14 +591,14 @@ export default function HomePage() {
       {result ? (
         <>
           <section className="mt-6 grid gap-3 sm:mt-8 sm:gap-4 md:grid-cols-2 xl:grid-cols-5">
-            <MetricCard label="총 투자원가" value={formatMoney(result.total_cost_basis_report, reportCurrency)} />
-            <MetricCard label="총 평가금액" value={formatMoney(result.total_market_value_report, reportCurrency)} />
+            <MetricCard label={t.totalCostBasis} value={formatMoney(result.total_cost_basis_report, reportCurrency)} />
+            <MetricCard label={t.totalMarketValue} value={formatMoney(result.total_market_value_report, reportCurrency)} />
             <MetricCard
-              label="총 손익"
+              label={t.totalPnl}
               value={formatMoney(result.total_profit_loss_report, reportCurrency)}
               tone={result.total_profit_loss_report >= 0 ? "positive" : "negative"}
             />
-            <MetricCard label="포트폴리오 변동성" value={formatPercent(result.portfolio_garch_volatility)} keepDecimals />
+            <MetricCard label={t.portfolioVolatility} value={formatPercent(result.portfolio_garch_volatility)} keepDecimals />
             <MetricCard
               label="VaR 95%"
               value={result.var_95_amount !== null ? formatMoney(result.var_95_amount, reportCurrency) : "-"}
@@ -597,8 +610,7 @@ export default function HomePage() {
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">VaR</p>
             <h2 className="mt-2 text-2xl font-semibold text-ink">Value at Risk</h2>
             <p className="mt-4 text-sm leading-7 text-slate-600">
-              VaR 95%는 포트폴리오의 하루 수익률이 정규분포를 따른다고 가정할 때, 하위 5% 구간에 들어가는 손실 임계값입니다.
-              평소와 비슷한 시장 조건이 이어진다면 100일 중 약 5일 정도는 이 손실보다 더 나쁠 수 있습니다.
+              {t.varDesc}
             </p>
             <div className="mt-4 h-56 rounded-2xl bg-slate-50 px-3 py-4 sm:mt-5 sm:h-80">
               <ResponsiveContainer width="100%" height="100%">
@@ -617,7 +629,7 @@ export default function HomePage() {
                       }
                       return (
                         <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
-                          수익률 {(label * 100).toFixed(2)}%
+                          {t.returnLabel} {(label * 100).toFixed(2)}%
                         </div>
                       );
                     }}
@@ -637,15 +649,15 @@ export default function HomePage() {
             </div>
             <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">하위 꼬리 확률</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.tailProb}</p>
                 <p className="mt-2 text-2xl font-semibold text-ink">{(result.var_95_tail_probability * 100).toFixed(0)}%</p>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">VaR 컷오프 수익률</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.varCutoffReturn}</p>
                 <p className="mt-2 text-2xl font-semibold text-ink">{formatPercent(result.var_95_cutoff_return)}</p>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">VaR 금액</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.varAmount}</p>
                 <p className="mt-2 text-2xl font-semibold text-red-600">{result.var_95_amount !== null ? formatMoney(result.var_95_amount, reportCurrency) : "-"}</p>
               </div>
             </div>
@@ -655,13 +667,13 @@ export default function HomePage() {
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Volatility Trend</p>
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
-                <h2 className="mt-2 text-2xl font-semibold text-ink">포트폴리오 변동성</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-ink">{t.volatilityTitle}</h2>
                 <p className="mt-3 text-sm leading-7 text-slate-600">
-                  포트폴리오 연간 변동성 변화 추이입니다.
+                  {t.volatilityDesc}
                 </p>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">최근 변동성</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.latestVolatility}</p>
                 <p className="mt-2 text-2xl font-semibold text-ink">{formatPercent(result.portfolio_garch_volatility)}</p>
               </div>
             </div>
@@ -680,8 +692,8 @@ export default function HomePage() {
                       }
                       return (
                         <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
-                          <p>날짜 {displayDate || "-"}</p>
-                          <p>변동성 {(Number(payload[0]?.value) * 100).toFixed(2)}%</p>
+                          <p>{t.dateLabel} {displayDate || "-"}</p>
+                          <p>{t.volatilityLabel} {(Number(payload[0]?.value) * 100).toFixed(2)}%</p>
                         </div>
                       );
                     }}
@@ -698,11 +710,11 @@ export default function HomePage() {
               <div>
                 <h2 className="mt-2 text-2xl font-semibold text-ink">Maximum Drawdown</h2>
                 <p className="mt-3 text-sm leading-7 text-slate-600">
-                  포트폴리오가 이전 고점 대비 얼마나 하락했는지 시간 흐름에 따라 보여줍니다.
+                  {t.drawdownDesc}
                 </p>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">최대 낙폭</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.maxDrawdown}</p>
                 <p className="mt-2 text-2xl font-semibold text-red-600">{formatPercent(result.max_drawdown)}</p>
               </div>
             </div>
@@ -721,8 +733,8 @@ export default function HomePage() {
                       }
                       return (
                         <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
-                          <p>날짜 {displayDate || "-"}</p>
-                          <p>변동성 {(Number(payload[0]?.value) * 100).toFixed(2)}%</p>
+                          <p>{t.dateLabel} {displayDate || "-"}</p>
+                          <p>{t.volatilityLabel} {(Number(payload[0]?.value) * 100).toFixed(2)}%</p>
                         </div>
                       );
                     }}
@@ -754,7 +766,7 @@ export default function HomePage() {
 
             <div className="rounded-[30px] border border-white/70 bg-white/80 p-6 shadow-panel backdrop-blur">
               <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Volatility</p>
-              <h2 className="mt-2 text-2xl font-semibold text-ink">자산별 변동성</h2>
+              <h2 className="mt-2 text-2xl font-semibold text-ink">{t.assetVolatility}</h2>
               <div className="mt-5 space-y-3">
                 {result.assets.map((asset) => (
                   <div key={asset.asset} className="rounded-2xl bg-slate-50 px-4 py-3">
@@ -770,7 +782,7 @@ export default function HomePage() {
 
           <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Trend</p>
-            <h2 className="mt-2 text-2xl font-semibold text-ink">자산 가치 추이</h2>
+            <h2 className="mt-2 text-2xl font-semibold text-ink">{t.assetValueTrend}</h2>
             <div className="mt-4 h-64 sm:mt-5 sm:h-96">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={normalizedPricesForChart}>
@@ -798,19 +810,19 @@ export default function HomePage() {
             <div className="overflow-hidden rounded-[30px] border border-white/70 bg-white/80 shadow-panel backdrop-blur">
               <div className="border-b border-slate-100 px-6 py-5">
                 <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Assets</p>
-                <h2 className="mt-2 text-2xl font-semibold text-ink">자산별 평가표</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-ink">{t.assetSummary}</h2>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-400">
                     <tr>
-                      <th className="px-5 py-3 text-left">자산</th>
-                      <th className="px-5 py-3 text-right">현재가</th>
-                      <th className="px-5 py-3 text-right">평가금액</th>
-                      <th className="px-5 py-3 text-right">비중</th>
-                      <th className="px-5 py-3 text-right">손익</th>
-                      <th className="px-5 py-3 text-right">수익률</th>
-                      <th className="px-5 py-3 text-right">변동성</th>
+                      <th className="px-5 py-3 text-left">{t.asset}</th>
+                      <th className="px-5 py-3 text-right">{t.currentPrice}</th>
+                      <th className="px-5 py-3 text-right">{t.marketValue}</th>
+                      <th className="px-5 py-3 text-right">{t.weight}</th>
+                      <th className="px-5 py-3 text-right">{t.pnl}</th>
+                      <th className="px-5 py-3 text-right">{t.returnPct}</th>
+                      <th className="px-5 py-3 text-right">{t.volatilityCol}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -851,7 +863,7 @@ export default function HomePage() {
             <div className="overflow-hidden rounded-[30px] border border-white/70 bg-white/80 shadow-panel backdrop-blur">
               <div className="border-b border-slate-100 px-6 py-5">
                 <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Correlation</p>
-                <h2 className="mt-2 text-2xl font-semibold text-ink">상관관계</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-ink">{t.correlation}</h2>
               </div>
               <div className="overflow-x-auto px-4 py-4">
                 {result.correlation[0] ? (() => {
@@ -900,9 +912,9 @@ export default function HomePage() {
 
           <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Risk Strategy Prep</p>
-            <h2 className="mt-2 text-2xl font-semibold text-ink">리스크 대비 전략 분석</h2>
+            <h2 className="mt-2 text-2xl font-semibold text-ink">{t.riskSectionTitle}</h2>
             <div className="mt-5 flex flex-col gap-3 text-base text-slate-700 lg:flex-row lg:items-center lg:gap-4">
-              <span className="hidden lg:inline">나는</span>
+              <span className="hidden lg:inline">{t.riskPrefix}</span>
               <select
                 value={selectedRiskFactorValue}
                 onChange={(event) => {
@@ -918,7 +930,7 @@ export default function HomePage() {
                   </option>
                 ))}
               </select>
-              <span className="hidden lg:inline">이</span>
+              {t.riskConnector ? <span className="hidden lg:inline">{t.riskConnector}</span> : null}
               <select
                 value={riskDirection}
                 onChange={(event) => {
@@ -928,10 +940,10 @@ export default function HomePage() {
                 }}
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-ember lg:w-[120px]"
               >
-                <option value="up">상승</option>
-                <option value="down">하락</option>
+                <option value="up">{t.directionUp}</option>
+                <option value="down">{t.directionDown}</option>
               </select>
-              <span className="hidden lg:inline">하는 리스크에 대비하고 싶어</span>
+              <span className="hidden lg:inline">{t.riskSuffix}</span>
             </div>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <button
@@ -940,9 +952,9 @@ export default function HomePage() {
                 disabled={!selectedRiskFactor || isRiskLoading}
                 className="rounded-full bg-ink px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isRiskLoading ? "분석 중..." : "리스크 대비 전략 분석"}
+                {isRiskLoading ? t.riskAnalyzing : t.riskAnalyzeBtn}
               </button>
-              {selectedRiskFactor ? <p className="text-sm text-slate-500">선택 요인: {selectedRiskFactor.label}</p> : null}
+              {selectedRiskFactor ? <p className="text-sm text-slate-500">{t.selectedFactor} {selectedRiskFactor.label}</p> : null}
             </div>
 
             {riskErrorMessage ? (
@@ -952,29 +964,29 @@ export default function HomePage() {
             {riskResult ? (
               <div className="mt-5 grid gap-3 sm:mt-6 sm:gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">포트폴리오와 대상자산의 상관계수</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.corrWithPortfolio}</p>
                   <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.correlation, 3)}</p>
                 </div>
                 <div className="rounded-2xl bg-slate-50 px-4 py-4">
                   <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-500">
-                    <span>베타</span>
+                    <span>{t.beta}</span>
                     <div className="group relative flex items-center">
                       <button
                         type="button"
-                        aria-label="베타 설명"
+                        aria-label={t.betaAriaLabel}
                         className="inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border border-slate-300 bg-white text-[11px] font-semibold normal-case text-slate-500"
                       >
                         ?
                       </button>
                       <div className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 hidden w-64 -translate-x-1/2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-[11px] normal-case leading-5 text-slate-600 shadow-lg group-hover:block">
-                        포트폴리오가 전체 시장 움직임에 얼마나 민감하게 반응하는지를 나타내는 상대적 변동성 지표입니다.
+                        {t.betaDesc}
                       </div>
                     </div>
                   </div>
                   <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.beta, 3)}</p>
                 </div>
                 <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">헤지비율</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.hedgeRatio}</p>
                   <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.hedge_ratio, 3)}</p>
                 </div>
 
@@ -994,7 +1006,7 @@ export default function HomePage() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-xs uppercase tracking-[0.24em] text-slate-500">AI Strategy</p>
-                    <h3 className="mt-1 text-lg font-semibold text-ink">AI 헤지 전략 추천</h3>
+                    <h3 className="mt-1 text-lg font-semibold text-ink">{t.aiHedgeTitle}</h3>
                   </div>
                   <button
                     type="button"
@@ -1002,14 +1014,14 @@ export default function HomePage() {
                     disabled={isRecommending}
                     className="rounded-full bg-pine px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isRecommending ? "추천 생성 중..." : "전략 추천받기"}
+                    {isRecommending ? t.generating : t.getRecommendation}
                   </button>
                 </div>
 
                 <div className="mt-4">
                   <label className="mb-1.5 block text-xs font-medium text-slate-500">
                     OpenAI API Key
-                    <span className="ml-1 font-normal text-slate-400">(세션 동안 저장됩니다)</span>
+                    <span className="ml-1 font-normal text-slate-400">{t.sessionSaved}</span>
                   </label>
                   <div className="flex items-center gap-2">
                     <input
@@ -1026,22 +1038,22 @@ export default function HomePage() {
                       onClick={() => setShowApiKey((v) => !v)}
                       className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-500 hover:bg-slate-50"
                     >
-                      {showApiKey ? "숨기기" : "보기"}
+                      {showApiKey ? t.hide : t.show}
                     </button>
                   </div>
                 </div>
 
                 <div className="mt-4">
                   <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                    추가 요청사항
-                    <span className="ml-1 font-normal text-slate-400">(선택)</span>
+                    {t.additionalContext}
+                    <span className="ml-1 font-normal text-slate-400">{t.optional}</span>
                   </label>
                   <textarea
                     value={userContext}
                     onChange={(e) => setUserContext(e.target.value)}
                     maxLength={1000}
                     rows={3}
-                    placeholder="예: 국내 주식 위주 포트폴리오입니다. 환헤지 방법도 같이 설명해주세요."
+                    placeholder={t.contextPlaceholder}
                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder-slate-300 outline-none focus:border-pine focus:ring-1 focus:ring-pine resize-none"
                   />
                 </div>

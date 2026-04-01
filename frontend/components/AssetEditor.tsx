@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { searchTicker, type TickerSearchResult } from "@/lib/api";
+import { useLang } from "@/lib/language-context";
 import { REPORT_CURRENCIES } from "@/lib/constants";
 import type { AssetDraft } from "@/lib/types";
 
@@ -14,22 +15,23 @@ type AssetEditorProps = {
   onRemove: () => void;
 };
 
-const QUOTE_TYPE_LABEL: Record<string, string> = {
-  EQUITY: "주식",
-  ETF: "ETF",
-  CRYPTOCURRENCY: "암호화폐",
-  CURRENCY: "통화",
-  INDEX: "지수",
-  FUTURE: "선물",
-  MUTUALFUND: "펀드",
-};
-
 export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove }: AssetEditorProps) {
+  const { t } = useLang();
   const [results, setResults] = useState<TickerSearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [searchError, setSearchError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const quoteTypeLabel: Record<string, string> = {
+    EQUITY: t.qtEquity,
+    ETF: "ETF",
+    CRYPTOCURRENCY: t.qtCrypto,
+    CURRENCY: t.qtCurrency,
+    INDEX: t.qtIndex,
+    FUTURE: t.qtFuture,
+    MUTUALFUND: t.qtFund,
+  };
 
   useEffect(() => {
     if (hideCsv && asset.source_type === "csv") {
@@ -92,28 +94,28 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
           onClick={onRemove}
           className="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-600 transition hover:border-red-200 hover:text-red-600"
         >
-          제거
+          {t.remove}
         </button>
       </div>
 
       <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4 md:grid-cols-2">
         {asset.source_type === "yahoo_finance" ? (
           <label className="flex flex-col gap-2 text-sm text-slate-700">
-            종목코드
+            {t.ticker}
             <div ref={containerRef} className="relative">
               <input
                 value={asset.ticker}
                 onChange={(e) => handleTickerChange(e.target.value)}
                 onFocus={() => results.length > 0 && setIsOpen(true)}
                 onKeyDown={(e) => e.key === "Escape" && setIsOpen(false)}
-                placeholder="종목명 또는 코드 검색 (예: 삼성, AAPL)"
+                placeholder={t.tickerPlaceholder}
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-ember"
               />
               {isOpen && (
                 <ul className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg">
                   {searchError ? (
                     <li className="px-4 py-3 text-sm text-amber-600">
-                      서버가 시작 중입니다. 잠시 후 다시 시도해 주세요.
+                      {t.serverStartingSearch}
                     </li>
                   ) : (
                     results.map((r) => (
@@ -130,7 +132,7 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
                           <span className="flex-1 truncate text-sm text-slate-600">{r.name}</span>
                           {r.type && (
                             <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
-                              {QUOTE_TYPE_LABEL[r.type] ?? r.type}
+                              {quoteTypeLabel[r.type] ?? r.type}
                             </span>
                           )}
                         </button>
@@ -143,7 +145,7 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
           </label>
         ) : (
           <label className="flex flex-col gap-2 text-sm text-slate-700">
-            가격 CSV
+            {t.priceCsv}
             <textarea
               value={asset.csv_text}
               onChange={(event) => onChange({ ...asset, csv_text: event.target.value })}
@@ -153,19 +155,19 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
         )}
 
         <label className="flex flex-col gap-2 text-sm text-slate-700">
-          가격 소스
+          {t.priceSource}
           <select
             value={asset.source_type}
             onChange={(event) => onChange({ ...asset, source_type: event.target.value as AssetDraft["source_type"] })}
             className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-ember"
           >
             <option value="yahoo_finance">Yahoo Finance</option>
-            {!hideCsv && <option value="csv">CSV 입력</option>}
+            {!hideCsv && <option value="csv">{t.csvInput}</option>}
           </select>
         </label>
 
         <div className="flex flex-col gap-2 text-sm text-slate-700">
-          <span>매수가</span>
+          <span>{t.purchasePrice}</span>
           <div className="grid grid-cols-[1fr_92px] gap-2">
             <input
               type="number"
@@ -190,7 +192,7 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
         </div>
 
         <label className="flex flex-col gap-2 text-sm text-slate-700">
-          수량
+          {t.quantity}
           <input
             type="number"
             min="0"
