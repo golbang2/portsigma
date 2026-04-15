@@ -22,6 +22,7 @@ export type Translations = {
   totalMarketValue: string;
   totalPnl: string;
   portfolioVolatility: string;
+  portfolioVolatilityTooltip: string;
   // VaR
   varDesc: string;
   returnLabel: string;
@@ -123,6 +124,7 @@ const ko: Translations = {
   totalMarketValue: "총 평가금액",
   totalPnl: "총 손익",
   portfolioVolatility: "포트폴리오 변동성",
+  portfolioVolatilityTooltip: "GARCH(1,1)을 통해 계산된 모형 기반 연간 변동성입니다.",
   varDesc:
     "VaR 95%는 포트폴리오의 하루 수익률이 정규분포를 따른다고 가정할 때, 하위 5% 구간에 들어가는 손실 임계값입니다. 평소와 비슷한 시장 조건이 이어진다면 100일 중 약 5일 정도는 이 손실보다 더 나쁠 수 있습니다.",
   returnLabel: "수익률",
@@ -212,6 +214,7 @@ const en: Translations = {
   totalMarketValue: "Total Market Value",
   totalPnl: "Total P&L",
   portfolioVolatility: "Portfolio Volatility",
+  portfolioVolatilityTooltip: "Model-based annualised volatility estimated via GARCH(1,1).",
   varDesc:
     "VaR 95% is the loss threshold at the 5th percentile of the portfolio's daily return distribution, assuming normality. Under normal market conditions, losses are expected to exceed this level on roughly 5 out of every 100 days.",
   returnLabel: "Return",

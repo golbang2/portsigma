@@ -598,7 +598,7 @@ export default function HomePage() {
               value={formatMoney(result.total_profit_loss_report, reportCurrency)}
               tone={result.total_profit_loss_report >= 0 ? "positive" : "negative"}
             />
-            <MetricCard label={t.portfolioVolatility} value={formatPercent(result.portfolio_garch_volatility)} keepDecimals />
+            <MetricCard label={t.portfolioVolatility} value={formatPercent(result.portfolio_garch_volatility)} keepDecimals tooltip={t.portfolioVolatilityTooltip} />
             <MetricCard
               label="VaR 95%"
               value={result.var_95_amount !== null ? formatMoney(result.var_95_amount, reportCurrency) : "-"}
