@@ -634,17 +634,14 @@ export default function HomePage() {
           </section>
 
           <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Volatility Trend</p>
-            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-              <div>
-                <div className="mt-2 flex items-center gap-2">
-                  <h2 className="text-2xl font-semibold text-ink">{t.volatilityTitle}</h2>
-                  <VolatilityTooltip text={t.portfolioVolatilityTooltip} />
-                </div>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-2">
+                <h2 className="text-2xl font-semibold text-ink">{t.volatilityTitle}</h2>
+                <VolatilityTooltip text={t.portfolioVolatilityTooltip} />
               </div>
-              <div className="rounded-2xl bg-slate-50 px-4 py-4">
+              <div className="rounded-2xl bg-slate-50 px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.latestVolatility}</p>
-                <p className="mt-2 text-2xl font-semibold text-ink">{formatPercent(result.portfolio_garch_volatility)}</p>
+                <p className="mt-1 text-2xl font-semibold text-ink">{formatPercent(result.portfolio_garch_volatility)}</p>
               </div>
             </div>
             <div className="mt-4 h-56 rounded-2xl bg-slate-50 px-3 py-4 sm:mt-5 sm:h-80">
@@ -675,8 +672,7 @@ export default function HomePage() {
           </section>
 
           <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">VaR</p>
-            <div className="mt-2 flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <h2 className="text-2xl font-semibold text-ink">Value at Risk</h2>
               <VolatilityTooltip text={t.varDesc} />
             </div>
@@ -732,8 +728,7 @@ export default function HomePage() {
           </section>
 
           <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">CVaR</p>
-            <div className="mt-2 flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <h2 className="text-2xl font-semibold text-ink">{t.cvarTitle}</h2>
               <VolatilityTooltip text={t.cvarDesc} />
             </div>
@@ -798,17 +793,14 @@ export default function HomePage() {
           </section>
 
           <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Drawdown</p>
-            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-              <div>
-                <div className="mt-2 flex items-center gap-2">
-                  <h2 className="text-2xl font-semibold text-ink">Maximum Drawdown</h2>
-                  <VolatilityTooltip text={t.drawdownDesc} />
-                </div>
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-2">
+                <h2 className="text-2xl font-semibold text-ink">Maximum Drawdown</h2>
+                <VolatilityTooltip text={t.drawdownDesc} />
               </div>
-              <div className="rounded-2xl bg-slate-50 px-4 py-4">
+              <div className="rounded-2xl bg-slate-50 px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.maxDrawdown}</p>
-                <p className="mt-2 text-2xl font-semibold text-red-600">{formatPercent(result.max_drawdown)}</p>
+                <p className="mt-1 text-2xl font-semibold text-red-600">{formatPercent(result.max_drawdown)}</p>
               </div>
             </div>
             <div className="mt-4 h-56 rounded-2xl bg-slate-50 px-3 py-4 sm:mt-5 sm:h-80">
