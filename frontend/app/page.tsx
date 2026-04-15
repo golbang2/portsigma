@@ -147,7 +147,7 @@ function VolatilityTooltip({ text }: { text: string }) {
         i
       </button>
       {show && (
-        <div className="absolute bottom-full left-1/2 z-10 mb-2 w-60 -translate-x-1/2 rounded-xl bg-slate-800 px-3 py-2 normal-case tracking-normal text-xs leading-relaxed text-white shadow-lg">
+        <div className="absolute bottom-full left-1/2 z-10 mb-2 w-72 -translate-x-1/2 rounded-xl bg-slate-800 px-3 py-2 normal-case tracking-normal text-xs leading-relaxed text-white shadow-lg">
           {text}
           <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
         </div>
@@ -641,9 +641,6 @@ export default function HomePage() {
                   <h2 className="text-2xl font-semibold text-ink">{t.volatilityTitle}</h2>
                   <VolatilityTooltip text={t.portfolioVolatilityTooltip} />
                 </div>
-                <p className="mt-3 text-sm leading-7 text-slate-600">
-                  {t.volatilityDesc}
-                </p>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.latestVolatility}</p>
@@ -679,10 +676,10 @@ export default function HomePage() {
 
           <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">VaR</p>
-            <h2 className="mt-2 text-2xl font-semibold text-ink">Value at Risk</h2>
-            <p className="mt-4 text-sm leading-7 text-slate-600">
-              {t.varDesc}
-            </p>
+            <div className="mt-2 flex items-center gap-2">
+              <h2 className="text-2xl font-semibold text-ink">Value at Risk</h2>
+              <VolatilityTooltip text={t.varDesc} />
+            </div>
             <div className="mt-4 h-56 rounded-2xl bg-slate-50 px-3 py-4 sm:mt-5 sm:h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={normalCurveData}>
@@ -736,10 +733,10 @@ export default function HomePage() {
 
           <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">CVaR</p>
-            <h2 className="mt-2 text-2xl font-semibold text-ink">{t.cvarTitle}</h2>
-            <p className="mt-4 text-sm leading-7 text-slate-600">
-              {t.cvarDesc}
-            </p>
+            <div className="mt-2 flex items-center gap-2">
+              <h2 className="text-2xl font-semibold text-ink">{t.cvarTitle}</h2>
+              <VolatilityTooltip text={t.cvarDesc} />
+            </div>
             <div className="mt-4 h-56 rounded-2xl bg-slate-50 px-3 py-4 sm:mt-5 sm:h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={normalCurveData}>
