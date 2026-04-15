@@ -633,6 +633,50 @@ export default function HomePage() {
           </section>
 
           <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Volatility Trend</p>
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <div className="mt-2 flex items-center gap-2">
+                  <h2 className="text-2xl font-semibold text-ink">{t.volatilityTitle}</h2>
+                  <VolatilityTooltip text={t.portfolioVolatilityTooltip} />
+                </div>
+                <p className="mt-3 text-sm leading-7 text-slate-600">
+                  {t.volatilityDesc}
+                </p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.latestVolatility}</p>
+                <p className="mt-2 text-2xl font-semibold text-ink">{formatPercent(result.portfolio_garch_volatility)}</p>
+              </div>
+            </div>
+            <div className="mt-4 h-56 rounded-2xl bg-slate-50 px-3 py-4 sm:mt-5 sm:h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={portfolioVolatilitySeries}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#d6d3d1" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                  <YAxis tickFormatter={(value: number) => `${(value * 100).toFixed(0)}%`} tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      const point = payload?.[0]?.payload as { date?: string } | undefined;
+                      const displayDate = point?.date ?? (typeof label === "string" ? label : "");
+                      if (!active || !payload?.length) {
+                        return null;
+                      }
+                      return (
+                        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
+                          <p>{t.dateLabel} {displayDate || "-"}</p>
+                          <p>{t.volatilityLabel} {(Number(payload[0]?.value) * 100).toFixed(2)}%</p>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Line type="monotone" dataKey="portfolio_volatility" stroke="#0f766e" strokeWidth={2.4} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+
+          <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">VaR</p>
             <h2 className="mt-2 text-2xl font-semibold text-ink">Value at Risk</h2>
             <p className="mt-4 text-sm leading-7 text-slate-600">
@@ -752,50 +796,6 @@ export default function HomePage() {
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.cvarAmount}</p>
                 <p className="mt-2 text-2xl font-semibold text-red-700">{result.cvar_95_amount !== null ? formatMoney(result.cvar_95_amount, reportCurrency) : "-"}</p>
               </div>
-            </div>
-          </section>
-
-          <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Volatility Trend</p>
-            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-              <div>
-                <div className="mt-2 flex items-center gap-2">
-                  <h2 className="text-2xl font-semibold text-ink">{t.volatilityTitle}</h2>
-                  <VolatilityTooltip text={t.portfolioVolatilityTooltip} />
-                </div>
-                <p className="mt-3 text-sm leading-7 text-slate-600">
-                  {t.volatilityDesc}
-                </p>
-              </div>
-              <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.latestVolatility}</p>
-                <p className="mt-2 text-2xl font-semibold text-ink">{formatPercent(result.portfolio_garch_volatility)}</p>
-              </div>
-            </div>
-            <div className="mt-4 h-56 rounded-2xl bg-slate-50 px-3 py-4 sm:mt-5 sm:h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={portfolioVolatilitySeries}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#d6d3d1" />
-                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                  <YAxis tickFormatter={(value: number) => `${(value * 100).toFixed(0)}%`} tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    content={({ active, payload, label }) => {
-                      const point = payload?.[0]?.payload as { date?: string } | undefined;
-                      const displayDate = point?.date ?? (typeof label === "string" ? label : "");
-                      if (!active || !payload?.length) {
-                        return null;
-                      }
-                      return (
-                        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
-                          <p>{t.dateLabel} {displayDate || "-"}</p>
-                          <p>{t.volatilityLabel} {(Number(payload[0]?.value) * 100).toFixed(2)}%</p>
-                        </div>
-                      );
-                    }}
-                  />
-                  <Line type="monotone" dataKey="portfolio_volatility" stroke="#0f766e" strokeWidth={2.4} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
             </div>
           </section>
 

@@ -134,7 +134,7 @@ const ko: Translations = {
   portfolioVolatilityTooltip: "GARCH(1,1)을 통해 계산된 모형 기반 연간 변동성입니다.",
   sharpeRatio: "샤프지수",
   cvar95: "CVaR 95%",
-  cvarTitle: "조건부 위험가치",
+  cvarTitle: "Conditional Value at Risk",
   cvarDesc: "CVaR 95%는 VaR 95% 손실을 초과하는 최악의 5% 시나리오에서 예상되는 평균 손실액입니다. VaR가 '이 손실까지는 버틸 수 있다'는 경계선이라면, CVaR는 그 경계를 넘겼을 때 실제로 얼마나 잃을 수 있는지를 나타냅니다.",
   cvarReturn: "CVaR 수익률",
   cvarAmount: "CVaR 금액",
