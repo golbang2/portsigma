@@ -625,9 +625,10 @@ export default function HomePage() {
             />
             <MetricCard label={t.portfolioVolatility} value={formatPercent(result.portfolio_garch_volatility)} keepDecimals />
             <MetricCard
-              label="VaR 95%"
-              value={result.var_95_amount !== null ? formatMoney(result.var_95_amount, reportCurrency) : "-"}
-              tone="negative"
+              label={t.sharpeRatio}
+              value={result.sharpe_ratio !== null && result.sharpe_ratio !== undefined ? result.sharpe_ratio.toFixed(2) : "-"}
+              tone={result.sharpe_ratio !== null && result.sharpe_ratio !== undefined ? (result.sharpe_ratio >= 1 ? "positive" : result.sharpe_ratio < 0 ? "negative" : "default") : "default"}
+              keepDecimals
             />
           </section>
 

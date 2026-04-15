@@ -56,6 +56,7 @@ export type AnalyzeResponse = {
   total_market_value_report: number;
   total_profit_loss_report: number;
   portfolio_garch_volatility: number | null;
+  sharpe_ratio: number | null;
   var_95_return: number | null;
   var_95_amount: number | null;
   var_95_confidence: number;

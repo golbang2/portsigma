@@ -67,6 +67,7 @@ class AnalyzePortfolioResponse(BaseModel):
     total_market_value_report: float
     total_profit_loss_report: float
     portfolio_garch_volatility: float | None = None
+    sharpe_ratio: float | None = None
     var_95_return: float | None = None
     var_95_amount: float | None = None
     var_95_confidence: float = 0.95

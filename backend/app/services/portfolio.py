@@ -332,6 +332,11 @@ def analyze_portfolio(payload: AnalyzePortfolioRequest) -> AnalyzePortfolioRespo
         float(context.asset_frame["market_value_report"].sum()),
         portfolio_vol,
     )
+    sharpe_ratio: float | None = None
+    if portfolio_vol and var_mean_return is not None:
+        annualized_mean = var_mean_return * TRADING_DAYS_PER_YEAR
+        sharpe_ratio = annualized_mean / portfolio_vol
+
     drawdown_series, max_drawdown = build_drawdown_series(context.portfolio_returns)
     context.asset_frame["garch_volatility"] = context.asset_frame["asset"].map(garch_vol)
 
@@ -370,6 +375,7 @@ def analyze_portfolio(payload: AnalyzePortfolioRequest) -> AnalyzePortfolioRespo
         total_market_value_report=float(context.asset_frame["market_value_report"].sum()),
         total_profit_loss_report=float(context.asset_frame["profit_loss_report"].sum()),
         portfolio_garch_volatility=portfolio_vol,
+        sharpe_ratio=sharpe_ratio,
         var_95_return=var_95_return,
         var_95_amount=var_95_amount,
         var_mean_return=var_mean_return,
