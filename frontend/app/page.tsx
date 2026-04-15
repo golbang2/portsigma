@@ -1058,26 +1058,15 @@ export default function HomePage() {
             ) : null}
 
             {riskResult ? (
-              <div className="mt-5 grid gap-3 sm:mt-6 sm:gap-4 md:grid-cols-2 xl:grid-cols-5">
+              <div className="mt-5 grid gap-3 sm:mt-6 sm:gap-4 md:grid-cols-3">
                 <div className="rounded-2xl bg-slate-50 px-4 py-4">
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.corrWithPortfolio}</p>
                   <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.correlation, 3)}</p>
                 </div>
                 <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                  <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+                  <div className="flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-slate-500">
                     <span>{t.beta}</span>
-                    <div className="group relative flex items-center">
-                      <button
-                        type="button"
-                        aria-label={t.betaAriaLabel}
-                        className="inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border border-slate-300 bg-white text-[11px] font-semibold normal-case text-slate-500"
-                      >
-                        ?
-                      </button>
-                      <div className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 hidden w-64 -translate-x-1/2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-[11px] normal-case leading-5 text-slate-600 shadow-lg group-hover:block">
-                        {t.betaDesc}
-                      </div>
-                    </div>
+                    <VolatilityTooltip text={t.betaDesc} />
                   </div>
                   <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.beta, 3)}</p>
                 </div>
@@ -1085,7 +1074,6 @@ export default function HomePage() {
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.hedgeRatio}</p>
                   <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.hedge_ratio, 3)}</p>
                 </div>
-
               </div>
             ) : null}
 
