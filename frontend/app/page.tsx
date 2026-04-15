@@ -801,10 +801,10 @@ export default function HomePage() {
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Drawdown</p>
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
-                <h2 className="mt-2 text-2xl font-semibold text-ink">Maximum Drawdown</h2>
-                <p className="mt-3 text-sm leading-7 text-slate-600">
-                  {t.drawdownDesc}
-                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <h2 className="text-2xl font-semibold text-ink">Maximum Drawdown</h2>
+                  <VolatilityTooltip text={t.drawdownDesc} />
+                </div>
               </div>
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.maxDrawdown}</p>
@@ -827,7 +827,7 @@ export default function HomePage() {
                       return (
                         <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
                           <p>{t.dateLabel} {displayDate || "-"}</p>
-                          <p>{t.volatilityLabel} {(Number(payload[0]?.value) * 100).toFixed(2)}%</p>
+                          <p>{t.drawdownLabel} {(Number(payload[0]?.value) * 100).toFixed(2)}%</p>
                         </div>
                       );
                     }}

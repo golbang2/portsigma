@@ -46,6 +46,7 @@ export type Translations = {
   // Drawdown
   drawdownDesc: string;
   maxDrawdown: string;
+  drawdownLabel: string;
   // Charts
   assetVolatility: string;
   assetValueTrend: string;
@@ -154,6 +155,7 @@ const ko: Translations = {
   volatilityLabel: "변동성",
   drawdownDesc: "포트폴리오가 이전 고점 대비 얼마나 하락했는지 시간 흐름에 따라 보여줍니다.",
   maxDrawdown: "최대 낙폭",
+  drawdownLabel: "낙폭",
   assetVolatility: "자산별 변동성",
   assetValueTrend: "자산 가치 추이",
   assetSummary: "자산별 평가표",
@@ -252,6 +254,7 @@ const en: Translations = {
   volatilityLabel: "Volatility",
   drawdownDesc: "Shows how far the portfolio has fallen from its previous peak over time.",
   maxDrawdown: "Maximum Drawdown",
+  drawdownLabel: "Drawdown",
   assetVolatility: "Asset Volatility",
   assetValueTrend: "Asset Value Trend",
   assetSummary: "Asset Summary",
