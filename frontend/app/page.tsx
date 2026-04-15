@@ -159,6 +159,7 @@ function VolatilityTooltip({ text }: { text: string }) {
 export default function HomePage() {
   const { t, toggleLang } = useLang();
   const [portfolioName, setPortfolioName] = useState("My Portfolio");
+  const [isEditingName, setIsEditingName] = useState(false);
   const [reportCurrency, setReportCurrency] = useState("KRW");
   const [period, setPeriod] = useState<HistoryPeriod>("5y");
   const [assets, setAssets] = useState<AssetDraft[]>([createAsset(0), createAsset(1), createAsset(2)]);
@@ -499,17 +500,37 @@ export default function HomePage() {
 
         {/* 설정 */}
         <div className="mt-5 grid grid-cols-1 gap-3 sm:mt-6 sm:grid-cols-2 sm:gap-4 md:grid-cols-4">
-          <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-500">
+          <div className="flex flex-col gap-1.5 text-xs font-medium text-slate-500">
             {t.portfolioName}
-            <input
-              value={portfolioName}
-              onChange={(event) => {
-                setPortfolioName(event.target.value);
-                resetRiskAnalysis();
-              }}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ember"
-            />
-          </label>
+            {isEditingName ? (
+              <input
+                autoFocus
+                value={portfolioName}
+                onChange={(event) => {
+                  setPortfolioName(event.target.value);
+                  resetRiskAnalysis();
+                }}
+                onBlur={() => setIsEditingName(false)}
+                onKeyDown={(e) => { if (e.key === "Enter") setIsEditingName(false); }}
+                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-ink outline-none transition focus:border-ember"
+              />
+            ) : (
+              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                <span className="flex-1 text-sm text-ink truncate">{portfolioName || "My Portfolio"}</span>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingName(true)}
+                  className="shrink-0 text-slate-400 hover:text-ember transition-colors"
+                  title="편집"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
           <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-500">
             {t.reportCurrency}
             <select
