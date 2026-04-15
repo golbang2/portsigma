@@ -615,7 +615,7 @@ export default function HomePage() {
 
       {result ? (
         <>
-          <section className="mt-6 grid gap-3 sm:mt-8 sm:gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+          <section className="mt-6 grid gap-3 sm:mt-8 sm:gap-4 md:grid-cols-2 xl:grid-cols-5">
             <MetricCard label={t.totalCostBasis} value={formatMoney(result.total_cost_basis_report, reportCurrency)} />
             <MetricCard label={t.totalMarketValue} value={formatMoney(result.total_market_value_report, reportCurrency)} />
             <MetricCard
@@ -627,11 +627,6 @@ export default function HomePage() {
             <MetricCard
               label="VaR 95%"
               value={result.var_95_amount !== null ? formatMoney(result.var_95_amount, reportCurrency) : "-"}
-              tone="negative"
-            />
-            <MetricCard
-              label={t.cvar95}
-              value={result.cvar_95_amount !== null ? formatMoney(result.cvar_95_amount, reportCurrency) : "-"}
               tone="negative"
             />
           </section>
@@ -677,7 +672,7 @@ export default function HomePage() {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-            <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4 md:grid-cols-3">
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.tailProb}</p>
                 <p className="mt-2 text-2xl font-semibold text-ink">{(result.var_95_tail_probability * 100).toFixed(0)}%</p>
@@ -690,8 +685,70 @@ export default function HomePage() {
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.varAmount}</p>
                 <p className="mt-2 text-2xl font-semibold text-red-600">{result.var_95_amount !== null ? formatMoney(result.var_95_amount, reportCurrency) : "-"}</p>
               </div>
+            </div>
+          </section>
+
+          <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">CVaR</p>
+            <h2 className="mt-2 text-2xl font-semibold text-ink">{t.cvarTitle}</h2>
+            <p className="mt-4 text-sm leading-7 text-slate-600">
+              {t.cvarDesc}
+            </p>
+            <div className="mt-4 h-56 rounded-2xl bg-slate-50 px-3 py-4 sm:mt-5 sm:h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={normalCurveData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#d6d3d1" />
+                  <XAxis
+                    dataKey="x"
+                    tickFormatter={(value: number) => `${(value * 100).toFixed(1)}%`}
+                    stroke="#64748b"
+                  />
+                  <YAxis hide />
+                  <Tooltip
+                    content={({ active, label }) => {
+                      if (!active || typeof label !== "number") {
+                        return null;
+                      }
+                      return (
+                        <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
+                          {t.returnLabel} {(label * 100).toFixed(2)}%
+                        </div>
+                      );
+                    }}
+                  />
+                  <Area type="monotone" dataKey="density" stroke="#7c3aed" fill="#ddd6fe" fillOpacity={0.4} strokeWidth={2} />
+                  <Area type="monotone" dataKey="tailDensity" stroke="#b91c1c" fill="#b91c1c" fillOpacity={0.85} strokeWidth={0} />
+                  {result.var_95_cutoff_return !== null ? (
+                    <ReferenceLine
+                      x={result.var_95_cutoff_return}
+                      stroke="#dc2626"
+                      strokeDasharray="4 3"
+                      strokeWidth={2}
+                      label={{ value: "VaR 95%", position: "insideTopRight", fill: "#dc2626", fontSize: 12 }}
+                    />
+                  ) : null}
+                  {result.cvar_95_return !== null ? (
+                    <ReferenceLine
+                      x={-(result.cvar_95_return)}
+                      stroke="#7f1d1d"
+                      strokeWidth={2.5}
+                      label={{ value: "CVaR 95%", position: "insideTopLeft", fill: "#7f1d1d", fontSize: 12 }}
+                    />
+                  ) : null}
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4 md:grid-cols-3">
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">CVaR 95%</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.varCutoffReturn}</p>
+                <p className="mt-2 text-2xl font-semibold text-red-600">{formatPercent(result.var_95_cutoff_return)}</p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.cvarReturn}</p>
+                <p className="mt-2 text-2xl font-semibold text-red-700">{result.cvar_95_return !== null ? formatPercent(-result.cvar_95_return) : "-"}</p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.cvarAmount}</p>
                 <p className="mt-2 text-2xl font-semibold text-red-700">{result.cvar_95_amount !== null ? formatMoney(result.cvar_95_amount, reportCurrency) : "-"}</p>
               </div>
             </div>
