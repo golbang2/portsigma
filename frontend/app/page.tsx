@@ -137,7 +137,7 @@ function VolatilityTooltip({ text }: { text: string }) {
     <div className="relative flex items-center">
       <button
         type="button"
-        className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-300 text-[11px] font-bold text-white hover:bg-slate-400 focus:outline-none"
+        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-300 normal-case tracking-normal text-[11px] font-bold text-white hover:bg-slate-400 focus:outline-none"
         onMouseEnter={() => setShow(true)}
         onMouseLeave={() => setShow(false)}
         onFocus={() => setShow(true)}
@@ -147,7 +147,7 @@ function VolatilityTooltip({ text }: { text: string }) {
         i
       </button>
       {show && (
-        <div className="absolute bottom-full left-1/2 z-10 mb-2 w-60 -translate-x-1/2 rounded-xl bg-slate-800 px-3 py-2 text-xs leading-relaxed text-white shadow-lg">
+        <div className="absolute bottom-full left-1/2 z-10 mb-2 w-60 -translate-x-1/2 rounded-xl bg-slate-800 px-3 py-2 normal-case tracking-normal text-xs leading-relaxed text-white shadow-lg">
           {text}
           <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
         </div>
