@@ -615,7 +615,7 @@ export default function HomePage() {
 
       {result ? (
         <>
-          <section className="mt-6 grid gap-3 sm:mt-8 sm:gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <section className="mt-6 grid gap-3 sm:mt-8 sm:gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
             <MetricCard label={t.totalCostBasis} value={formatMoney(result.total_cost_basis_report, reportCurrency)} />
             <MetricCard label={t.totalMarketValue} value={formatMoney(result.total_market_value_report, reportCurrency)} />
             <MetricCard
@@ -627,6 +627,11 @@ export default function HomePage() {
             <MetricCard
               label="VaR 95%"
               value={result.var_95_amount !== null ? formatMoney(result.var_95_amount, reportCurrency) : "-"}
+              tone="negative"
+            />
+            <MetricCard
+              label={t.cvar95}
+              value={result.cvar_95_amount !== null ? formatMoney(result.cvar_95_amount, reportCurrency) : "-"}
               tone="negative"
             />
           </section>
