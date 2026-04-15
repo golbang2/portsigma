@@ -1,8 +1,10 @@
 # Portsigma
 
-Portsigma is a portfolio risk dashboard built with `Next.js` and `FastAPI`.
+**Live: [https://portsigma.vercel.app](https://portsigma.vercel.app)**
 
-It lets you combine Yahoo Finance price history and custom CSV price data, then analyze a multi-asset portfolio with currency conversion, GARCH-based volatility, VaR, drawdown, DCC correlation, and hedge-oriented risk diagnostics.
+Portsigma is a portfolio risk dashboard built with Next.js and FastAPI.
+
+Combine Yahoo Finance price history and custom CSV price data, then analyze a multi-asset portfolio with currency conversion, GARCH-based volatility, VaR/CVaR, drawdown, DCC correlation, Sharpe ratio, and AI-powered hedge guidance.
 
 ## Stack
 
@@ -19,7 +21,7 @@ It lets you combine Yahoo Finance price history and custom CSV price data, then 
 - Pydantic
 - pandas / numpy
 - yfinance
-- arch
+- arch (GARCH)
 
 ## Project Structure
 
@@ -48,23 +50,30 @@ Portsigma/
 
 ## Main Features
 
-- Yahoo Finance historical price loading
-- CSV price input for unsupported assets
+- Yahoo Finance historical price loading with autocomplete (Korean stock support)
+- CSV price input for assets not covered by Yahoo Finance (up to 15 assets)
 - Portfolio CSV export and restore
 - Purchase price and quantity tracking
 - Reporting-currency conversion
-- Asset-level and portfolio-level volatility using GARCH
+- Korean / English language toggle
+- Portfolio name with inline edit
+- Auto-save draft to localStorage
+- Summary metrics: total cost basis, market value, unrealized P&L, portfolio volatility, Sharpe ratio
+- GARCH-based asset-level and portfolio-level volatility
+- Portfolio volatility time series chart
+- VaR 95% with normal distribution chart
+- CVaR 95% with normal distribution chart
+- Maximum drawdown time series chart
 - DCC-based correlation matrix
-- VaR 95% with normal-distribution chart
-- Portfolio volatility time series
-- Maximum drawdown time series
 - Market value weights pie chart
 - Normalized price trend chart
-- Risk factor analysis with:
+- Risk factor analysis:
   - portfolio-to-target correlation
   - beta
   - hedge ratio
-- RAG-based hedge guidance flow
+- RAG-based AI hedge strategy recommendation (bring-your-own OpenAI key)
+- Backend cold-start warmup banner (Render free tier)
+- Rate limiting on all API endpoints
 
 ## Local Run
 
@@ -81,7 +90,7 @@ Backend default URL: `http://localhost:8000`
 Health check:
 
 ```bash
-http://localhost:8000/health
+curl http://localhost:8000/health
 ```
 
 ### 2. Frontend
@@ -98,13 +107,7 @@ Frontend default URL: `http://localhost:3000`
 
 ### Frontend
 
-Use [frontend/.env.example](F:\Portsigma\frontend\.env.example) as a template.
-
-Main variable:
-
-- `NEXT_PUBLIC_API_BASE_URL`
-
-Example:
+Use `frontend/.env.example` as a template.
 
 ```env
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
@@ -112,12 +115,12 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 
 ### Backend
 
-Use [backend/.env.example](F:\Portsigma\backend\.env.example) as a template.
+Use `backend/.env.example` as a template.
 
-Main variables:
-
-- `FRONTEND_ORIGINS`
-- `OPENAI_API_KEY` (optional, only if the server should use its own OpenAI key)
+```env
+FRONTEND_ORIGINS=http://localhost:3000
+OPENAI_API_KEY=sk-...   # optional — users can supply their own key in the UI
+```
 
 ## API Overview
 
@@ -134,7 +137,7 @@ Example payload:
   "period": "5y",
   "assets": [
     {
-      "name": "Apple",
+      "name": "Asset 1",
       "source_type": "yahoo_finance",
       "ticker": "AAPL",
       "purchase_price": 180,
@@ -148,7 +151,7 @@ Example payload:
 
 ### `POST /api/v1/portfolio/risk-strategy`
 
-Returns risk metrics for a selected hedge target, including:
+Returns risk metrics for a selected hedge target:
 
 - portfolio-to-target correlation
 - beta
@@ -158,7 +161,7 @@ Returns risk metrics for a selected hedge target, including:
 
 Streams RAG-based hedge guidance using the analysis result plus internal reference documents.
 
-Current RAG guidance is intentionally written at a general, educational level:
+Guidance is intentionally educational:
 
 - no specific stock picks
 - no specific ETF ticker recommendations
@@ -166,11 +169,7 @@ Current RAG guidance is intentionally written at a general, educational level:
 
 ## RAG Documents
 
-RAG reference documents live in:
-
-- [backend/app/rag/documents](F:\Portsigma\backend\app\rag\documents)
-
-These documents currently cover:
+Reference documents live in `backend/app/rag/documents/` and currently cover:
 
 - hedge basics
 - beta hedge concepts
@@ -181,40 +180,31 @@ These documents currently cover:
 - VaR and position sizing
 - practical hedge process
 
-The recommendation service is implemented in:
-
-- [strategy_recommend.py](F:\Portsigma\backend\app\services\strategy_recommend.py)
+The recommendation service is implemented in `backend/app/services/strategy_recommend.py`.
 
 ## Deployment
 
-### Render
-
-Deploy the backend from the `backend` directory.
+### Backend — Render
 
 - Root Directory: `backend`
 - Build Command: `pip install -r requirements.txt`
 - Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-- Environment Variable: `FRONTEND_ORIGINS=https://your-frontend-domain.vercel.app`
+- Environment Variable: `FRONTEND_ORIGINS=https://portsigma.vercel.app`
 
-Starter config:
+Starter config: [render.yaml](render.yaml)
 
-- [render.yaml](F:\Portsigma\render.yaml)
-
-### Vercel
-
-Deploy the frontend from the `frontend` directory.
+### Frontend — Vercel
 
 - Root Directory: `frontend`
 - Framework Preset: `Next.js`
 - Environment Variable: `NEXT_PUBLIC_API_BASE_URL=https://your-render-backend.onrender.com`
 
-Starter config:
-
-- [vercel.json](F:\Portsigma\frontend\vercel.json)
+Starter config: `frontend/vercel.json`
 
 ## Notes
 
-- CSV-based assets are useful when Yahoo Finance does not provide a ticker or price history.
-- Volatility values shown in the product are based on GARCH, not simple standard deviation.
-- Correlation analysis uses DCC-based conditional correlation rather than a static correlation matrix.
-- This repository currently focuses on analytics and educational hedge guidance, not account management or billing.
+- CSV-based assets are useful when Yahoo Finance does not cover a ticker or price history.
+- Volatility values are based on GARCH, not simple standard deviation.
+- Correlation analysis uses DCC-based conditional correlation, not a static matrix.
+- Sharpe ratio is computed from GARCH volatility and the annualized portfolio return.
+- This repository focuses on analytics and educational hedge guidance, not account management or billing.
