@@ -629,6 +629,7 @@ export default function HomePage() {
               value={result.sharpe_ratio !== null && result.sharpe_ratio !== undefined ? result.sharpe_ratio.toFixed(2) : "-"}
               tone={result.sharpe_ratio !== null && result.sharpe_ratio !== undefined ? (result.sharpe_ratio >= 1 ? "positive" : result.sharpe_ratio < 0 ? "negative" : "default") : "default"}
               keepDecimals
+              tooltip={t.sharpeRatioTooltip}
             />
           </section>
 

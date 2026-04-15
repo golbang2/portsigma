@@ -24,6 +24,7 @@ export type Translations = {
   portfolioVolatility: string;
   portfolioVolatilityTooltip: string;
   sharpeRatio: string;
+  sharpeRatioTooltip: string;
   cvar95: string;
   // VaR
   varDesc: string;
@@ -133,6 +134,7 @@ const ko: Translations = {
   portfolioVolatility: "포트폴리오 변동성",
   portfolioVolatilityTooltip: "GARCH(1,1)을 통해 계산된 모형 기반 연간 변동성입니다.",
   sharpeRatio: "샤프지수",
+  sharpeRatioTooltip: "위험(변동성) 대비 투자 수익률을 나타내는 지표로, 감수한 위험 1단위당 얻은 초과 수익을 의미합니다. 값이 클수록 동일한 위험하에서 더 높은 수익을 낸 효율적인 투자이며, 일반적으로 1~2 이상이면 우수, 0.6 이상이면 양호한 포트폴리오입니다.",
   cvar95: "CVaR 95%",
   cvarTitle: "Conditional Value at Risk",
   cvarDesc: "CVaR 95%는 VaR 95% 손실을 초과하는 최악의 5% 시나리오에서 예상되는 평균 손실액입니다. VaR가 '이 손실까지는 버틸 수 있다'는 경계선이라면, CVaR는 그 경계를 넘겼을 때 실제로 얼마나 잃을 수 있는지를 나타냅니다.",
@@ -229,6 +231,7 @@ const en: Translations = {
   portfolioVolatility: "Portfolio Volatility",
   portfolioVolatilityTooltip: "Model-based annualised volatility estimated via GARCH(1,1).",
   sharpeRatio: "Sharpe Ratio",
+  sharpeRatioTooltip: "A measure of return relative to risk (volatility), representing the excess return earned per unit of risk taken. The higher the value, the more efficient the investment. Generally, above 1–2 is excellent; above 0.6 is considered good.",
   cvar95: "CVaR 95%",
   cvarTitle: "Conditional Value at Risk",
   cvarDesc: "CVaR 95% is the expected average loss in the worst 5% of scenarios — the tail beyond the VaR threshold. Where VaR marks the boundary of acceptable loss, CVaR tells you how bad it could get when that boundary is breached.",
