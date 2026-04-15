@@ -647,7 +647,7 @@ export default function HomePage() {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-            <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.tailProb}</p>
                 <p className="mt-2 text-2xl font-semibold text-ink">{(result.var_95_tail_probability * 100).toFixed(0)}%</p>
@@ -659,6 +659,10 @@ export default function HomePage() {
               <div className="rounded-2xl bg-slate-50 px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.varAmount}</p>
                 <p className="mt-2 text-2xl font-semibold text-red-600">{result.var_95_amount !== null ? formatMoney(result.var_95_amount, reportCurrency) : "-"}</p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">CVaR 95%</p>
+                <p className="mt-2 text-2xl font-semibold text-red-700">{result.cvar_95_amount !== null ? formatMoney(result.cvar_95_amount, reportCurrency) : "-"}</p>
               </div>
             </div>
           </section>
@@ -1088,7 +1092,6 @@ export default function HomePage() {
     </main>
   );
 }
-
 
 
 

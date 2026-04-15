@@ -74,6 +74,8 @@ class AnalyzePortfolioResponse(BaseModel):
     var_mean_return: float | None = None
     var_std_return: float | None = None
     var_95_cutoff_return: float | None = None
+    cvar_95_return: float | None = None
+    cvar_95_amount: float | None = None
     assets: list[AssetReport]
     warnings: list[str]
     normalized_prices: list[dict[str, float | str]]

@@ -21,6 +21,7 @@ from app.services.market_data import fetch_fx_series, fetch_yahoo_prices
 
 
 Z_SCORE_95_LEFT_TAIL = -1.6448536269514722
+TAIL_PROBABILITY_95 = 0.05
 TRADING_DAYS_PER_YEAR = 252
 MAJOR_INDEX_FACTORS: dict[str, tuple[str, str]] = {
     "sp500": ("S&P 500", "^GSPC"),
@@ -122,10 +123,18 @@ def serialize_correlation(frame: pd.DataFrame) -> list[dict[str, float | str]]:
 
 def calculate_parametric_var_95(
     portfolio_returns: pd.Series, market_value: float, annualized_volatility: float | None = None
-) -> tuple[float | None, float | None, float | None, float | None, float | None]:
+) -> tuple[
+    float | None,
+    float | None,
+    float | None,
+    float | None,
+    float | None,
+    float | None,
+    float | None,
+]:
     cleaned = portfolio_returns.dropna()
     if cleaned.empty:
-        return None, None, None, None, None
+        return None, None, None, None, None, None, None
 
     mean_return = float(cleaned.mean())
     daily_volatility = (
@@ -134,12 +143,19 @@ def calculate_parametric_var_95(
         else None
     )
     if daily_volatility is None:
-        return None, None, mean_return, None, None
+        return None, None, mean_return, None, None, None, None
 
     threshold_return = mean_return + Z_SCORE_95_LEFT_TAIL * daily_volatility
     var_return = max(0.0, -threshold_return)
     var_amount = market_value * var_return
-    return var_return, var_amount, mean_return, daily_volatility, threshold_return
+
+    normal_density_at_cutoff = np.exp(-0.5 * Z_SCORE_95_LEFT_TAIL**2) / np.sqrt(2 * np.pi)
+    cvar_tail_mean_return = (
+        mean_return - daily_volatility * normal_density_at_cutoff / TAIL_PROBABILITY_95
+    )
+    cvar_return = max(0.0, -cvar_tail_mean_return)
+    cvar_amount = market_value * cvar_return
+    return var_return, var_amount, mean_return, daily_volatility, threshold_return, cvar_return, cvar_amount
 
 
 def _fetch_asset(
@@ -303,7 +319,15 @@ def analyze_portfolio(payload: AnalyzePortfolioRequest) -> AnalyzePortfolioRespo
     garch_vol = context.returns.apply(calculate_garch_volatility)
     portfolio_vol = calculate_garch_volatility(context.portfolio_returns)
     portfolio_volatility_series = calculate_garch_volatility_series(context.portfolio_returns).to_frame(name="portfolio_volatility")
-    var_95_return, var_95_amount, var_mean_return, var_std_return, var_95_cutoff_return = calculate_parametric_var_95(
+    (
+        var_95_return,
+        var_95_amount,
+        var_mean_return,
+        var_std_return,
+        var_95_cutoff_return,
+        cvar_95_return,
+        cvar_95_amount,
+    ) = calculate_parametric_var_95(
         context.portfolio_returns,
         float(context.asset_frame["market_value_report"].sum()),
         portfolio_vol,
@@ -351,6 +375,8 @@ def analyze_portfolio(payload: AnalyzePortfolioRequest) -> AnalyzePortfolioRespo
         var_mean_return=var_mean_return,
         var_std_return=var_std_return,
         var_95_cutoff_return=var_95_cutoff_return,
+        cvar_95_return=cvar_95_return,
+        cvar_95_amount=cvar_95_amount,
         assets=assets,
         warnings=context.warnings,
         normalized_prices=serialize_time_series(normalize_prices(context.report_prices)),

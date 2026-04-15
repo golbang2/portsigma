@@ -63,6 +63,8 @@ export type AnalyzeResponse = {
   var_mean_return: number | null;
   var_std_return: number | null;
   var_95_cutoff_return: number | null;
+  cvar_95_return: number | null;
+  cvar_95_amount: number | null;
   assets: AssetReport[];
   warnings: string[];
   normalized_prices: Array<Record<string, string | number>>;
