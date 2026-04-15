@@ -1071,7 +1071,10 @@ export default function HomePage() {
                   <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.beta, 3)}</p>
                 </div>
                 <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.hedgeRatio}</p>
+                  <div className="flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-slate-500">
+                    <span>{t.hedgeRatio}</span>
+                    <VolatilityTooltip text={t.hedgeRatioTooltip} />
+                  </div>
                   <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.hedge_ratio, 3)}</p>
                 </div>
               </div>

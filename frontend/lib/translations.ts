@@ -75,6 +75,7 @@ export type Translations = {
   betaAriaLabel: string;
   betaDesc: string;
   hedgeRatio: string;
+  hedgeRatioTooltip: string;
   // AI recommendation
   aiHedgeTitle: string;
   generating: string;
@@ -178,6 +179,7 @@ const ko: Translations = {
   betaAriaLabel: "베타 설명",
   betaDesc: "포트폴리오가 전체 시장 움직임에 얼마나 민감하게 반응하는지를 나타내는 상대적 변동성 지표입니다.",
   hedgeRatio: "헤지비율",
+  hedgeRatioTooltip: "헤지 비율(Hedge Ratio)은 위험 회피(헤지)를 위해 파생상품(선물·옵션)을 사용하는 경우, 현물 자산의 가치 변동에 대응하여 설정하는 파생상품 계약의 비율입니다. 현물 포지션과 파생상품 포지션의 최적 비율을 설정하여 가격 위험을 최소화하는 것이 목적이며, 최소분산헤지비율이 사용됩니다.",
   aiHedgeTitle: "AI 헤지 전략 추천",
   generating: "추천 생성 중...",
   getRecommendation: "전략 추천받기",
@@ -275,6 +277,7 @@ const en: Translations = {
   betaAriaLabel: "Beta description",
   betaDesc: "A relative volatility measure of how sensitively the portfolio reacts to overall market movements.",
   hedgeRatio: "Hedge Ratio",
+  hedgeRatioTooltip: "The hedge ratio is the proportion of derivative contracts (futures, options) set relative to the change in value of the underlying spot position. Its purpose is to minimise price risk by finding the optimal ratio between the spot and derivative positions. The minimum-variance hedge ratio is used here.",
   aiHedgeTitle: "AI Hedge Strategy Recommendation",
   generating: "Generating...",
   getRecommendation: "Get Recommendation",
