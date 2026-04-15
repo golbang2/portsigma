@@ -131,6 +131,31 @@ function buildNormalCurveData(mean: number | null, std: number | null, cutoff: n
 
 const PIE_COLORS = ["#f97316", "#0f766e", "#0284c7", "#dc2626", "#7c3aed", "#ca8a04", "#14b8a6"];
 
+function VolatilityTooltip({ text }: { text: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative flex items-center">
+      <button
+        type="button"
+        className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-300 text-[11px] font-bold text-white hover:bg-slate-400 focus:outline-none"
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        onFocus={() => setShow(true)}
+        onBlur={() => setShow(false)}
+        aria-label={text}
+      >
+        i
+      </button>
+      {show && (
+        <div className="absolute bottom-full left-1/2 z-10 mb-2 w-60 -translate-x-1/2 rounded-xl bg-slate-800 px-3 py-2 text-xs leading-relaxed text-white shadow-lg">
+          {text}
+          <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function HomePage() {
   const { t, toggleLang } = useLang();
   const [portfolioName, setPortfolioName] = useState("My Portfolio");
@@ -598,7 +623,7 @@ export default function HomePage() {
               value={formatMoney(result.total_profit_loss_report, reportCurrency)}
               tone={result.total_profit_loss_report >= 0 ? "positive" : "negative"}
             />
-            <MetricCard label={t.portfolioVolatility} value={formatPercent(result.portfolio_garch_volatility)} keepDecimals tooltip={t.portfolioVolatilityTooltip} />
+            <MetricCard label={t.portfolioVolatility} value={formatPercent(result.portfolio_garch_volatility)} keepDecimals />
             <MetricCard
               label="VaR 95%"
               value={result.var_95_amount !== null ? formatMoney(result.var_95_amount, reportCurrency) : "-"}
@@ -671,7 +696,10 @@ export default function HomePage() {
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Volatility Trend</p>
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
-                <h2 className="mt-2 text-2xl font-semibold text-ink">{t.volatilityTitle}</h2>
+                <div className="mt-2 flex items-center gap-2">
+                  <h2 className="text-2xl font-semibold text-ink">{t.volatilityTitle}</h2>
+                  <VolatilityTooltip text={t.portfolioVolatilityTooltip} />
+                </div>
                 <p className="mt-3 text-sm leading-7 text-slate-600">
                   {t.volatilityDesc}
                 </p>
