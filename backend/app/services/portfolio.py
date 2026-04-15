@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from io import StringIO
 import time
 
+import numpy as np
 import pandas as pd
 
 from app.analytics.dcc import calculate_dcc_correlation_matrix
@@ -20,6 +21,7 @@ from app.services.market_data import fetch_fx_series, fetch_yahoo_prices
 
 
 Z_SCORE_95_LEFT_TAIL = -1.6448536269514722
+TRADING_DAYS_PER_YEAR = 252
 MAJOR_INDEX_FACTORS: dict[str, tuple[str, str]] = {
     "sp500": ("S&P 500", "^GSPC"),
     "nasdaq100": ("NASDAQ 100", "^NDX"),
@@ -119,18 +121,25 @@ def serialize_correlation(frame: pd.DataFrame) -> list[dict[str, float | str]]:
 
 
 def calculate_parametric_var_95(
-    portfolio_returns: pd.Series, market_value: float
+    portfolio_returns: pd.Series, market_value: float, annualized_volatility: float | None = None
 ) -> tuple[float | None, float | None, float | None, float | None, float | None]:
     cleaned = portfolio_returns.dropna()
     if cleaned.empty:
         return None, None, None, None, None
 
     mean_return = float(cleaned.mean())
-    std_return = float(cleaned.std(ddof=1))
-    threshold_return = mean_return + Z_SCORE_95_LEFT_TAIL * std_return
+    daily_volatility = (
+        annualized_volatility / np.sqrt(TRADING_DAYS_PER_YEAR)
+        if annualized_volatility is not None
+        else None
+    )
+    if daily_volatility is None:
+        return None, None, mean_return, None, None
+
+    threshold_return = mean_return + Z_SCORE_95_LEFT_TAIL * daily_volatility
     var_return = max(0.0, -threshold_return)
     var_amount = market_value * var_return
-    return var_return, var_amount, mean_return, std_return, threshold_return
+    return var_return, var_amount, mean_return, daily_volatility, threshold_return
 
 
 def _fetch_asset(
@@ -297,6 +306,7 @@ def analyze_portfolio(payload: AnalyzePortfolioRequest) -> AnalyzePortfolioRespo
     var_95_return, var_95_amount, var_mean_return, var_std_return, var_95_cutoff_return = calculate_parametric_var_95(
         context.portfolio_returns,
         float(context.asset_frame["market_value_report"].sum()),
+        portfolio_vol,
     )
     drawdown_series, max_drawdown = build_drawdown_series(context.portfolio_returns)
     context.asset_frame["garch_volatility"] = context.asset_frame["asset"].map(garch_vol)
@@ -377,4 +387,3 @@ def analyze_risk_strategy(payload: RiskStrategyRequest) -> RiskStrategyResponse:
         factor_volatility=factor_volatility,
         warnings=context.warnings,
     )
-
