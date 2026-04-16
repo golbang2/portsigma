@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from functools import lru_cache
 from pathlib import Path
 
@@ -68,8 +69,20 @@ def search_ticker(query: str) -> list[dict]:
 @lru_cache(maxsize=256)
 def fetch_yahoo_prices(ticker: str, period: str) -> tuple[pd.DataFrame, str | None]:
     ticker_obj = yf.Ticker(ticker)
-    history = ticker_obj.history(period=period, auto_adjust=True)
-    if history.empty:
+    history = None
+    for attempt in range(3):
+        try:
+            history = ticker_obj.history(period=period, auto_adjust=True)
+            break
+        except Exception as exc:  # noqa: BLE001
+            from yfinance.exceptions import YFRateLimitError
+            msg = str(exc).lower()
+            is_rate_limit = isinstance(exc, YFRateLimitError) or "429" in msg or "too many requests" in msg or "rate limit" in msg
+            if is_rate_limit and attempt < 2:
+                time.sleep(1.5 * (attempt + 1))
+                continue
+            raise
+    if history is None or history.empty:
         raise ValueError(f"No Yahoo Finance price history was found for '{ticker}'.")
 
     prices = history.reset_index()[["Date", "Close"]].copy()
