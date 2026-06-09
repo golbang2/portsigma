@@ -52,9 +52,11 @@ def run_portfolio_optimization(payload: OptimizePortfolioRequest) -> OptimizePor
     # Annualised covariance matrix
     cov_matrix = _build_covariance_matrix(garch_array, dcc_corr)
 
-    # Annualised expected returns (historical mean)
+    # Annualised expected returns via historical log returns (continuously compounded)
+    # log(1 + r_simple) converts daily simple returns to log returns; mean × 252 annualises
+    log_returns_df = np.log(1 + returns_df)
     expected_returns = np.array([
-        float(returns_df[name].mean()) * TRADING_DAYS_PER_YEAR
+        float(log_returns_df[name].mean()) * TRADING_DAYS_PER_YEAR
         for name in asset_names
     ])
 
