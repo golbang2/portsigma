@@ -79,6 +79,15 @@ def run_portfolio_optimization(payload: OptimizePortfolioRequest) -> OptimizePor
         for name in asset_names
     }
 
+    # Current portfolio expected return and volatility (w'μ, sqrt(w'Σw))
+    w_cur = np.array([current_weights[name] for name in asset_names])
+    mu = np.array([
+        float(np.log(1 + returns_df[name]).mean()) * TRADING_DAYS_PER_YEAR
+        for name in asset_names
+    ])
+    cur_ret = float(mu @ w_cur)
+    cur_vol = float(np.sqrt(np.clip(w_cur @ cov_matrix @ w_cur, 0.0, None)))
+
     frontier_out: list[FrontierPointSchema] = [
         FrontierPointSchema(
             expected_return=fp.expected_return,
@@ -99,6 +108,8 @@ def run_portfolio_optimization(payload: OptimizePortfolioRequest) -> OptimizePor
         expected_volatility=result.expected_volatility,
         sharpe_ratio=result.sharpe_ratio,
         current_weights=current_weights,
+        current_expected_return=cur_ret,
+        current_expected_volatility=cur_vol,
         frontier_points=frontier_out,
         solver=result.solver,
         solver_status=result.solver_status,

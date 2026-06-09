@@ -1337,9 +1337,9 @@ export default function HomePage() {
                           <Scatter
                             name="현재 포트폴리오"
                             data={[{
-                              x: result?.portfolio_garch_volatility ?? 0,
-                              y: (result?.assets.reduce((s, a) => s + (a.market_weight_report ?? 0) * 0, 0) ?? 0),
-                              sharpe: result?.sharpe_ratio ?? 0,
+                              x: optimizeResult.current_expected_volatility,
+                              y: optimizeResult.current_expected_return,
+                              sharpe: optimizeResult.current_expected_return / (optimizeResult.current_expected_volatility || 1),
                             }]}
                             fill="#f97316"
                             shape="star"
