@@ -127,6 +127,12 @@ export type StrategyRecommendRequest = {
   hedge_ratio: number | null;
   portfolio_volatility: number | null;
   factor_volatility: number | null;
+  // Extended portfolio context
+  var_95_return?: number | null;
+  cvar_95_return?: number | null;
+  max_drawdown?: number | null;
+  sharpe_ratio?: number | null;
+  asset_names?: string[];
   openai_api_key?: string;
   user_context?: string;
 };

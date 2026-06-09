@@ -149,5 +149,11 @@ class StrategyRecommendRequest(BaseModel):
     hedge_ratio: float | None = None
     portfolio_volatility: float | None = None
     factor_volatility: float | None = None
+    # Extended portfolio context (optional — frontend can omit for backwards compat)
+    var_95_return: float | None = None
+    cvar_95_return: float | None = None
+    max_drawdown: float | None = None
+    sharpe_ratio: float | None = None
+    asset_names: list[str] = Field(default_factory=list, max_length=15)
     openai_api_key: str | None = None
     user_context: str = Field(default="", max_length=1000)

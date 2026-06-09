@@ -277,6 +277,12 @@ export default function HomePage() {
       hedge_ratio: riskResult.hedge_ratio,
       portfolio_volatility: riskResult.portfolio_volatility,
       factor_volatility: riskResult.factor_volatility,
+      // Extended portfolio context from analyze result
+      var_95_return: result?.var_95_return ?? null,
+      cvar_95_return: result?.cvar_95_return ?? null,
+      max_drawdown: result?.max_drawdown ?? null,
+      sharpe_ratio: result?.sharpe_ratio ?? null,
+      asset_names: result?.assets.map((a) => a.asset) ?? [],
       openai_api_key: openaiApiKey || undefined,
       user_context: userContext.trim() || undefined,
     };

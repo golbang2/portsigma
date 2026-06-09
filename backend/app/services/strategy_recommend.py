@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import os
 from collections.abc import Iterator
@@ -9,29 +9,47 @@ from app.rag.engine import retrieve
 from app.schemas.portfolio import StrategyRecommendRequest
 
 SYSTEM_PROMPT = """당신은 포트폴리오 리스크 관리 전문가입니다.
-사용자의 포트폴리오 분석 결과와 참고 전략 문서를 바탕으로 교육적이고 일반적인 헤지 아이디어를 한국어로 제시해주세요.
+사용자의 포트폴리오 분석 결과와 참고 전략 문서를 바탕으로 구체적이고 실용적인 헤지 아이디어를 한국어로 제시해주세요.
 
 다음 형식으로 답변해주세요:
-1. 현재 상황 요약 (2-3문장)
-2. 가능한 헤지 방향 (자산군 또는 수단 범주 중심)
-3. 실행 시 고려할 점
-4. 주의사항
+1. 현재 리스크 진단 (핵심 수치 기반 2-3문장)
+2. 권장 헤지 방향 (자산군·수단 범주와 대표적 유형 예시 포함)
+3. 헤지 규모 및 실행 시 고려할 점
+4. 주의사항 및 한계
 
-전문 용어는 괄호 안에 한글 설명을 추가해주세요.
-특정 종목명, 개별 ETF 티커, 특정 상품명, 매수 지시형 표현은 사용하지 말고,
-지수 인버스형 수단, 채권형 자산, 금 관련 자산, 옵션 기반 방어 전략처럼 일반적인 범주 수준으로만 설명해주세요.
-특히 사용자가 상승 위험에 대비하려는 상황이라면, 상관관계 숫자만으로 방어 적합성을 단정하지 말고
-포지션 방향, 베타, 수단의 손익 구조를 함께 설명해주세요.
-포트폴리오와 대상 자산의 양의 상관관계가 높을 때 그 대상을 같은 방향으로 추가 편입하는 것은
-위험 완화가 아니라 같은 방향 노출 확대가 될 수 있다는 점도 분명히 설명해주세요."""
+안내 원칙:
+- 자산군 범주(주식형·채권형·금 관련·인버스형·파생수단 등)와 함께 대표적 상품 유형(예: 국내 대표지수 인버스 ETF 계열, 미국 국채 ETF 계열, 금 ETF·실물금 계열, 풋옵션 전략 등)을 예시로 들어 설명해도 됩니다.
+- 단, 개별 종목 코드·구체적 ETF 티커·특정 증권사 상품명은 직접 명시하지 마세요.
+- 수치 기반 판단을 명확히 하세요 (베타, VaR, 변동성 등).
+- 전문 용어는 괄호 안에 한글 설명을 추가해주세요.
+- 상승 위험 대응 시: 양의 상관관계가 높은 자산을 같은 방향으로 추가 편입하면 헤지가 아니라 노출 확대임을 명시하세요.
+- 포지션 방향과 손익 구조를 함께 설명해주세요."""
 
 
-def _format_value(v: float | None, as_percent: bool = False, decimals: int = 3) -> str:
+def _fmt(v: float | None, pct: bool = False, d: int = 2) -> str:
     if v is None:
         return "N/A"
-    if as_percent:
-        return f"{v * 100:.2f}%"
-    return f"{v:.{decimals}f}"
+    return f"{v * 100:.{d}f}%" if pct else f"{v:.{d}f}"
+
+
+def _build_query(payload: StrategyRecommendRequest) -> str:
+    """Rich query that includes all available portfolio metrics for better retrieval."""
+    direction_label = "상승" if payload.direction == "up" else "하락"
+    parts = [
+        f"{payload.factor_label} {direction_label} 리스크 헤지 전략",
+        f"베타 {_fmt(payload.beta)} 상관계수 {_fmt(payload.correlation)}",
+    ]
+    if payload.portfolio_volatility is not None:
+        parts.append(f"포트폴리오 변동성 {_fmt(payload.portfolio_volatility, pct=True)}")
+    if payload.var_95_return is not None:
+        parts.append(f"VaR95 {_fmt(payload.var_95_return, pct=True)}")
+    if payload.max_drawdown is not None:
+        parts.append(f"최대낙폭 {_fmt(payload.max_drawdown, pct=True)}")
+    if payload.sharpe_ratio is not None:
+        parts.append(f"샤프비율 {_fmt(payload.sharpe_ratio)}")
+    if payload.asset_names:
+        parts.append("보유자산: " + ", ".join(payload.asset_names[:5]))
+    return " ".join(parts)
 
 
 def stream_strategy_recommendation(payload: StrategyRecommendRequest) -> Iterator[str]:
@@ -40,38 +58,50 @@ def stream_strategy_recommendation(payload: StrategyRecommendRequest) -> Iterato
         raise ValueError("OpenAI API 키가 필요합니다. 키를 입력해주세요.")
 
     direction_label = "상승" if payload.direction == "up" else "하락"
-    query = (
-        f"{payload.factor_label} {direction_label} 리스크 헤지 전략 "
-        f"베타 {_format_value(payload.beta)} 상관계수 {_format_value(payload.correlation)}"
-    )
+
+    query = _build_query(payload)
     docs = retrieve(query, api_key=api_key)
     docs_text = "\n\n---\n\n".join(docs) if docs else "관련 문서를 찾지 못했습니다."
 
+    # ── 포트폴리오 분석 수치 블록 ──────────────────────────────────────────────
+    metrics_lines = [
+        f"- 포트폴리오명: {payload.portfolio_name}",
+        f"- 기준 통화: {payload.report_currency}",
+        f"- 리스크 요인: {payload.factor_label}",
+        f"- 리스크 방향: {direction_label}",
+        f"- 상관계수: {_fmt(payload.correlation)}",
+        f"- 베타: {_fmt(payload.beta)}",
+        f"- 헤지비율: {_fmt(payload.hedge_ratio)}",
+        f"- 포트폴리오 연간 변동성(GARCH): {_fmt(payload.portfolio_volatility, pct=True)}",
+        f"- 요인 연간 변동성: {_fmt(payload.factor_volatility, pct=True)}",
+    ]
+    if payload.var_95_return is not None:
+        metrics_lines.append(f"- VaR 95% (일간 수익률 기준): {_fmt(payload.var_95_return, pct=True)}")
+    if payload.cvar_95_return is not None:
+        metrics_lines.append(f"- CVaR 95% (Expected Shortfall): {_fmt(payload.cvar_95_return, pct=True)}")
+    if payload.max_drawdown is not None:
+        metrics_lines.append(f"- 최대 낙폭(MDD): {_fmt(payload.max_drawdown, pct=True)}")
+    if payload.sharpe_ratio is not None:
+        metrics_lines.append(f"- 샤프 비율: {_fmt(payload.sharpe_ratio)}")
+    if payload.asset_names:
+        metrics_lines.append(f"- 보유 자산: {', '.join(payload.asset_names)}")
+
     user_message = f"""## 포트폴리오 분석 결과
 
-- 포트폴리오명: {payload.portfolio_name}
-- 기준 통화: {payload.report_currency}
-- 리스크 요인: {payload.factor_label}
-- 리스크 방향: {direction_label}
-- 상관계수: {_format_value(payload.correlation)}
-- 베타: {_format_value(payload.beta)}
-- 헤지비율: {_format_value(payload.hedge_ratio)}
-- 포트폴리오 연간 변동성: {_format_value(payload.portfolio_volatility, as_percent=True)}
-- 요인 연간 변동성: {_format_value(payload.factor_volatility, as_percent=True)}
+{chr(10).join(metrics_lines)}
 
 ## 참고 전략 문서
 
 {docs_text}
 
-위 분석 결과를 바탕으로 일반적인 헤지 방향과 고려 요소를 설명해주세요.
-특정 종목명이나 개별 상품명을 직접 추천하지 말고 범주 수준에서만 제안해주세요.
-상승 위험 대응이라면 상관관계만으로 결론내리지 말고, 포지션 방향과 손익 구조까지 함께 설명해주세요.
-대상과 포트폴리오의 양의 상관관계가 높을 때 그 대상을 같은 방향으로 추가 편입하면 노출 확대가 될 수 있다는 점도 명시해주세요."""
+위 분석 수치를 근거로 구체적인 헤지 방향과 실행 고려사항을 설명해주세요.
+자산군 범주와 함께 대표적 상품 유형(예: 국내 대표지수 인버스 ETF 계열, 장기채권 ETF 계열 등)을 예시로 들어 실용적으로 안내해주세요.
+개별 종목 코드나 특정 ETF 티커는 명시하지 말고, 상품 유형과 전략 구조 수준으로 제시해주세요."""
 
     if payload.user_context and payload.user_context.strip():
         user_message += f"\n\n## 사용자 추가 요청\n\n{payload.user_context.strip()}"
 
-    client = OpenAI(api_key=api_key)  # noqa: S106 — key from user input, not hardcoded
+    client = OpenAI(api_key=api_key)  # noqa: S106
     stream = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
@@ -79,8 +109,8 @@ def stream_strategy_recommendation(payload: StrategyRecommendRequest) -> Iterato
             {"role": "user", "content": user_message},
         ],
         stream=True,
-        max_tokens=1200,
-        temperature=0.4,
+        max_tokens=1500,
+        temperature=0.35,
     )
     for chunk in stream:
         delta = chunk.choices[0].delta.content
