@@ -9,3 +9,12 @@
     envVars:
       - key: FRONTEND_ORIGINS
         sync: false
+      # Gurobi WLS (Web License Service) — set these in Render dashboard for Gurobi solver.
+      # Without them, optimizer automatically falls back to scipy (SLSQP).
+      # Obtain from https://license.gurobi.com
+      - key: GRB_WLSACCESSID
+        sync: false
+      - key: GRB_WLSSECRET
+        sync: false
+      - key: GRB_LICENSEID
+        sync: false

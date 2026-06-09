@@ -10,3 +10,5 @@ arch>=7.0.0
 python-multipart>=0.0.20
 openai>=1.54.0
 chromadb>=0.5.0
+scipy>=1.13.0
+gurobipy>=11.0.0

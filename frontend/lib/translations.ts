@@ -114,6 +114,26 @@ export type Translations = {
   qtFund: string;
   // Language toggle label
   langToggle: string;
+  // Portfolio optimization
+  optimizeSectionTitle: string;
+  optimizeObjectiveLabel: string;
+  objMinVol: string;
+  objMaxSharpe: string;
+  objFrontier: string;
+  optimizeMaxWeight: string;
+  optimizeAllowShort: string;
+  optimizeRfRate: string;
+  optimizeBtn: string;
+  optimizing: string;
+  errOptimize: string;
+  optimalWeights: string;
+  currentWeightsLabel: string;
+  optimalWeightsLabel: string;
+  expectedReturn: string;
+  expectedVolatility: string;
+  optimizeSolverLabel: string;
+  frontierTitle: string;
+  optimizeMinWeight: string;
 };
 
 const ko: Translations = {
@@ -213,6 +233,25 @@ const ko: Translations = {
   qtFuture: "선물",
   qtFund: "펀드",
   langToggle: "English",
+  optimizeSectionTitle: "최적 포트폴리오 구성",
+  optimizeObjectiveLabel: "최적화 목표",
+  objMinVol: "최소 변동성",
+  objMaxSharpe: "최대 샤프지수",
+  objFrontier: "효율적 프론티어",
+  optimizeMaxWeight: "종목당 최대 비중",
+  optimizeMinWeight: "종목당 최소 비중",
+  optimizeAllowShort: "공매도 허용",
+  optimizeRfRate: "무위험 수익률 (연율)",
+  optimizeBtn: "최적화 실행",
+  optimizing: "최적화 중...",
+  errOptimize: "포트폴리오 최적화에 실패했습니다.",
+  optimalWeights: "최적 비중",
+  currentWeightsLabel: "현재 비중",
+  optimalWeightsLabel: "최적 비중",
+  expectedReturn: "기대 수익률 (연율)",
+  expectedVolatility: "기대 변동성 (연율)",
+  optimizeSolverLabel: "솔버",
+  frontierTitle: "효율적 프론티어",
 };
 
 const en: Translations = {
@@ -312,6 +351,25 @@ const en: Translations = {
   qtFuture: "Futures",
   qtFund: "Fund",
   langToggle: "한국어",
+  optimizeSectionTitle: "Portfolio Optimization",
+  optimizeObjectiveLabel: "Objective",
+  objMinVol: "Min Volatility",
+  objMaxSharpe: "Max Sharpe",
+  objFrontier: "Efficient Frontier",
+  optimizeMaxWeight: "Max Weight per Asset",
+  optimizeMinWeight: "Min Weight per Asset",
+  optimizeAllowShort: "Allow Short Selling",
+  optimizeRfRate: "Risk-Free Rate (annual)",
+  optimizeBtn: "Run Optimization",
+  optimizing: "Optimizing...",
+  errOptimize: "Portfolio optimization failed.",
+  optimalWeights: "Optimal Weights",
+  currentWeightsLabel: "Current",
+  optimalWeightsLabel: "Optimal",
+  expectedReturn: "Expected Return (annual)",
+  expectedVolatility: "Expected Volatility (annual)",
+  optimizeSolverLabel: "Solver",
+  frontierTitle: "Efficient Frontier",
 };
 
 export const translations: Record<Lang, Translations> = { ko, en };

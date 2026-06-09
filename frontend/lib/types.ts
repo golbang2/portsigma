@@ -77,6 +77,44 @@ export type AnalyzeResponse = {
   max_drawdown: number | null;
 };
 
+export type OptimizeObjective = "min_volatility" | "max_sharpe" | "efficient_frontier";
+
+export type OptimizeRequest = {
+  portfolio_name: string;
+  report_currency: string;
+  period: HistoryPeriod;
+  assets: Omit<AssetDraft, "id">[];
+  objective: OptimizeObjective;
+  allow_short: boolean;
+  max_weight: number;
+  min_weight: number;
+  risk_free_rate: number;
+  n_frontier_points: number;
+};
+
+export type FrontierPoint = {
+  expected_return: number;
+  expected_volatility: number;
+  sharpe_ratio: number;
+  weights: Record<string, number>;
+};
+
+export type OptimizeResponse = {
+  portfolio_name: string;
+  report_currency: string;
+  period: HistoryPeriod;
+  objective: OptimizeObjective;
+  optimal_weights: Record<string, number>;
+  expected_return: number;
+  expected_volatility: number;
+  sharpe_ratio: number;
+  current_weights: Record<string, number>;
+  frontier_points: FrontierPoint[];
+  solver: string;
+  solver_status: string;
+  warnings: string[];
+};
+
 export type StrategyRecommendRequest = {
   portfolio_name: string;
   report_currency: string;

@@ -8,11 +8,14 @@ from slowapi.util import get_remote_address
 from app.schemas.portfolio import (
     AnalyzePortfolioRequest,
     AnalyzePortfolioResponse,
+    OptimizePortfolioRequest,
+    OptimizePortfolioResponse,
     RiskStrategyRequest,
     RiskStrategyResponse,
     StrategyRecommendRequest,
 )
 from app.services.market_data import search_ticker
+from app.services.optimize import run_portfolio_optimization
 from app.services.portfolio import analyze_portfolio, analyze_risk_strategy
 from app.services.strategy_recommend import stream_strategy_recommendation
 
@@ -40,6 +43,15 @@ def analyze_portfolio_endpoint(request: Request, payload: AnalyzePortfolioReques
 def analyze_risk_strategy_endpoint(request: Request, payload: RiskStrategyRequest) -> RiskStrategyResponse:
     try:
         return analyze_risk_strategy(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/portfolio/optimize", response_model=OptimizePortfolioResponse)
+@limiter.limit("5/minute")
+def optimize_portfolio_endpoint(request: Request, payload: OptimizePortfolioRequest) -> OptimizePortfolioResponse:
+    try:
+        return run_portfolio_optimization(payload)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

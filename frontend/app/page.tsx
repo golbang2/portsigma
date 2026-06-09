@@ -4,6 +4,8 @@ import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from "react"
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
   Cell,
   Legend,
@@ -13,6 +15,8 @@ import {
   PieChart,
   ReferenceLine,
   ResponsiveContainer,
+  Scatter,
+  ScatterChart,
   Tooltip,
   XAxis,
   YAxis
@@ -22,7 +26,7 @@ import ReactMarkdown from "react-markdown";
 
 import { AssetEditor } from "@/components/AssetEditor";
 import { MetricCard } from "@/components/MetricCard";
-import { analyzePortfolio, analyzeRiskStrategy, streamStrategyRecommendation, warmupBackend } from "@/lib/api";
+import { analyzePortfolio, analyzeRiskStrategy, optimizePortfolio, streamStrategyRecommendation, warmupBackend } from "@/lib/api";
 import { useLang } from "@/lib/language-context";
 import { DEFAULT_PRICE_CSV, HISTORY_PERIODS, MAJOR_INDEX_OPTIONS, REPORT_CURRENCIES } from "@/lib/constants";
 import { assetsToPortfolioCsv, parsePortfolioCsv } from "@/lib/portfolio-csv";
@@ -30,6 +34,8 @@ import type {
   AnalyzeResponse,
   AssetDraft,
   HistoryPeriod,
+  OptimizeObjective,
+  OptimizeResponse,
   RiskDirection,
   RiskFactorType,
   RiskStrategyResponse,
@@ -179,6 +185,14 @@ export default function HomePage() {
   const [openaiApiKey, setOpenaiApiKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [optimizeObjective, setOptimizeObjective] = useState<OptimizeObjective>("max_sharpe");
+  const [optimizeMaxWeight, setOptimizeMaxWeight] = useState(1.0);
+  const [optimizeMinWeight, setOptimizeMinWeight] = useState(0.0);
+  const [optimizeAllowShort, setOptimizeAllowShort] = useState(false);
+  const [optimizeRfRate, setOptimizeRfRate] = useState(0.05);
+  const [optimizeResult, setOptimizeResult] = useState<OptimizeResponse | null>(null);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizeError, setOptimizeError] = useState("");
   const [backendReady, setBackendReady] = useState<boolean | null>(null);
   const uploadRef = useRef<HTMLInputElement | null>(null);
   const draftLoadedRef = useRef(false);
@@ -277,9 +291,36 @@ export default function HomePage() {
     }
   }
 
+  async function handleOptimize() {
+    if (!result) return;
+    setIsOptimizing(true);
+    setOptimizeError("");
+    try {
+      const response = await optimizePortfolio({
+        portfolio_name: portfolioName,
+        report_currency: reportCurrency,
+        period,
+        assets: assets.map(({ id, ...asset }, i) => ({ ...asset, name: `Asset ${i + 1}` })),
+        objective: optimizeObjective,
+        allow_short: optimizeAllowShort,
+        max_weight: optimizeMaxWeight,
+        min_weight: optimizeMinWeight,
+        risk_free_rate: optimizeRfRate,
+        n_frontier_points: 30,
+      });
+      setOptimizeResult(response);
+    } catch (error) {
+      setOptimizeError(error instanceof Error ? error.message : t.errOptimize);
+    } finally {
+      setIsOptimizing(false);
+    }
+  }
+
   async function handleAnalyze() {
     setIsLoading(true);
     setErrorMessage("");
+    setOptimizeResult(null);
+    setOptimizeError("");
     resetRiskAnalysis();
     try {
       const response = await analyzePortfolio({
@@ -1175,6 +1216,263 @@ export default function HomePage() {
                     {isRecommending ? (
                       <span className="inline-block h-4 w-0.5 animate-pulse bg-slate-400" />
                     ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+
+          {/* 포트폴리오 최적화 섹션 */}
+          <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Optimization</p>
+            <h2 className="mt-2 text-2xl font-semibold text-ink">{t.optimizeSectionTitle}</h2>
+            <p className="mt-1 text-sm text-slate-500">GARCH/DCC 기반 공분산 행렬로 최적 비중을 계산합니다.</p>
+
+            {/* 목적함수 선택 */}
+            <div className="mt-5">
+              <p className="mb-2 text-xs font-medium uppercase tracking-[0.15em] text-slate-500">{t.optimizeObjectiveLabel}</p>
+              <div className="flex flex-wrap gap-2">
+                {(["min_volatility", "max_sharpe", "efficient_frontier"] as OptimizeObjective[]).map((obj) => (
+                  <button
+                    key={obj}
+                    type="button"
+                    onClick={() => setOptimizeObjective(obj)}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                      optimizeObjective === obj
+                        ? "bg-ember text-white"
+                        : "border border-slate-200 bg-white text-slate-600 hover:border-ember hover:text-ember"
+                    }`}
+                  >
+                    {obj === "min_volatility" ? t.objMinVol : obj === "max_sharpe" ? t.objMaxSharpe : t.objFrontier}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 제약조건 */}
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+              <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-500">
+                {t.optimizeMaxWeight}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min={0.1}
+                    max={1.0}
+                    step={0.05}
+                    value={optimizeMaxWeight}
+                    onChange={(e) => setOptimizeMaxWeight(Number(e.target.value))}
+                    className="flex-1 accent-ember"
+                  />
+                  <span className="w-10 text-right text-sm font-semibold text-ink">{(optimizeMaxWeight * 100).toFixed(0)}%</span>
+                </div>
+              </label>
+              <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-500">
+                {t.optimizeMinWeight}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min={0.0}
+                    max={0.3}
+                    step={0.01}
+                    value={optimizeMinWeight}
+                    onChange={(e) => setOptimizeMinWeight(Number(e.target.value))}
+                    className="flex-1 accent-ember"
+                  />
+                  <span className="w-10 text-right text-sm font-semibold text-ink">{(optimizeMinWeight * 100).toFixed(0)}%</span>
+                </div>
+              </label>
+              <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-500">
+                {t.optimizeRfRate}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range"
+                    min={0.0}
+                    max={0.1}
+                    step={0.005}
+                    value={optimizeRfRate}
+                    onChange={(e) => setOptimizeRfRate(Number(e.target.value))}
+                    className="flex-1 accent-ember"
+                  />
+                  <span className="w-10 text-right text-sm font-semibold text-ink">{(optimizeRfRate * 100).toFixed(1)}%</span>
+                </div>
+              </label>
+              <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={optimizeAllowShort}
+                  onChange={(e) => setOptimizeAllowShort(e.target.checked)}
+                  className="h-4 w-4 accent-ember"
+                />
+                <span className="text-sm text-ink">{t.optimizeAllowShort}</span>
+              </label>
+            </div>
+
+            <div className="mt-5">
+              <button
+                type="button"
+                onClick={handleOptimize}
+                disabled={isOptimizing}
+                className="rounded-full bg-ember px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isOptimizing ? t.optimizing : t.optimizeBtn}
+              </button>
+            </div>
+
+            {optimizeError ? (
+              <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{optimizeError}</div>
+            ) : null}
+
+            {optimizeResult ? (
+              <div className="mt-6 space-y-6">
+                {/* 결과 지표 */}
+                <div className="grid gap-3 sm:gap-4 md:grid-cols-4">
+                  <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.expectedReturn}</p>
+                    <p className="mt-2 text-2xl font-semibold text-pine">{formatPercent(optimizeResult.expected_return)}</p>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.expectedVolatility}</p>
+                    <p className="mt-2 text-2xl font-semibold text-ink">{formatPercent(optimizeResult.expected_volatility)}</p>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.sharpeRatio}</p>
+                    <p className={`mt-2 text-2xl font-semibold ${optimizeResult.sharpe_ratio >= 1 ? "text-pine" : optimizeResult.sharpe_ratio < 0 ? "text-red-500" : "text-ink"}`}>
+                      {optimizeResult.sharpe_ratio.toFixed(3)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.optimizeSolverLabel}</p>
+                    <p className="mt-2 text-lg font-semibold text-ink">{optimizeResult.solver}</p>
+                    <p className="text-xs text-slate-400">{optimizeResult.solver_status}</p>
+                  </div>
+                </div>
+
+                {/* 현재 vs 최적 비중 Bar Chart */}
+                <div>
+                  <h3 className="mb-3 text-base font-semibold text-ink">{t.optimalWeights}</h3>
+                  <div className="h-64 rounded-2xl bg-slate-50 px-3 py-4 sm:h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={Object.keys(optimizeResult.optimal_weights).map((name) => ({
+                          name,
+                          current: Number(((optimizeResult.current_weights[name] ?? 0) * 100).toFixed(2)),
+                          optimal: Number(((optimizeResult.optimal_weights[name] ?? 0) * 100).toFixed(2)),
+                        }))}
+                        margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#d6d3d1" />
+                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                        <YAxis tickFormatter={(v: number) => `${v}%`} tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+                        <Tooltip formatter={(value: number) => [`${value}%`]} />
+                        <Legend formatter={(value) => value === "current" ? t.currentWeightsLabel : t.optimalWeightsLabel} />
+                        <Bar dataKey="current" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="optimal" fill="#f97316" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* 최적 비중 테이블 */}
+                <div className="overflow-hidden rounded-2xl border border-slate-100">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <tr>
+                        <th className="px-5 py-3 text-left">{t.asset}</th>
+                        <th className="px-5 py-3 text-right">{t.currentWeightsLabel}</th>
+                        <th className="px-5 py-3 text-right">{t.optimalWeightsLabel}</th>
+                        <th className="px-5 py-3 text-right">변화</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.keys(optimizeResult.optimal_weights).map((name) => {
+                        const cur = optimizeResult.current_weights[name] ?? 0;
+                        const opt = optimizeResult.optimal_weights[name] ?? 0;
+                        const diff = opt - cur;
+                        return (
+                          <tr key={name} className="border-t border-slate-100 hover:bg-slate-50/70">
+                            <td className="px-5 py-3 font-semibold text-ink">{name}</td>
+                            <td className="px-5 py-3 text-right tabular-nums text-slate-500">{formatPercent(cur)}</td>
+                            <td className="px-5 py-3 text-right tabular-nums font-semibold text-ink">{formatPercent(opt)}</td>
+                            <td className={`px-5 py-3 text-right tabular-nums text-sm font-medium ${diff > 0.001 ? "text-pine" : diff < -0.001 ? "text-red-500" : "text-slate-400"}`}>
+                              {diff > 0.001 ? "+" : ""}{formatPercent(diff)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 효율적 프론티어 차트 */}
+                {optimizeResult.frontier_points.length > 0 ? (
+                  <div>
+                    <h3 className="mb-3 text-base font-semibold text-ink">{t.frontierTitle}</h3>
+                    <div className="h-72 rounded-2xl bg-slate-50 px-3 py-4 sm:h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ScatterChart margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#d6d3d1" />
+                          <XAxis
+                            dataKey="x"
+                            name="Volatility"
+                            tickFormatter={(v: number) => `${(v * 100).toFixed(1)}%`}
+                            tick={{ fontSize: 11, fill: "#94a3b8" }}
+                            tickLine={false}
+                            axisLine={false}
+                            label={{ value: "변동성", position: "insideBottomRight", offset: -4, fontSize: 11, fill: "#94a3b8" }}
+                          />
+                          <YAxis
+                            dataKey="y"
+                            name="Return"
+                            tickFormatter={(v: number) => `${(v * 100).toFixed(1)}%`}
+                            tick={{ fontSize: 11, fill: "#94a3b8" }}
+                            tickLine={false}
+                            axisLine={false}
+                            label={{ value: "수익률", angle: -90, position: "insideTopLeft", offset: 8, fontSize: 11, fill: "#94a3b8" }}
+                          />
+                          <Tooltip
+                            content={({ active, payload }) => {
+                              if (!active || !payload?.length) return null;
+                              const d = payload[0]?.payload as { x: number; y: number; sharpe: number } | undefined;
+                              if (!d) return null;
+                              return (
+                                <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-sm">
+                                  <p>변동성: {(d.x * 100).toFixed(2)}%</p>
+                                  <p>수익률: {(d.y * 100).toFixed(2)}%</p>
+                                  <p>샤프: {d.sharpe.toFixed(3)}</p>
+                                </div>
+                              );
+                            }}
+                          />
+                          <Scatter
+                            name="Frontier"
+                            data={optimizeResult.frontier_points.map((fp) => ({
+                              x: fp.expected_volatility,
+                              y: fp.expected_return,
+                              sharpe: fp.sharpe_ratio,
+                            }))}
+                            fill="#0f766e"
+                            opacity={0.7}
+                          />
+                          {/* Current portfolio */}
+                          <Scatter
+                            name="현재 포트폴리오"
+                            data={[{
+                              x: result?.portfolio_garch_volatility ?? 0,
+                              y: (result?.assets.reduce((s, a) => s + (a.market_weight_report ?? 0) * 0, 0) ?? 0),
+                              sharpe: result?.sharpe_ratio ?? 0,
+                            }]}
+                            fill="#f97316"
+                            shape="star"
+                          />
+                        </ScatterChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                ) : null}
+
+                {optimizeResult.warnings.length > 0 ? (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    {optimizeResult.warnings.map((w) => <p key={w}>{w}</p>)}
                   </div>
                 ) : null}
               </div>

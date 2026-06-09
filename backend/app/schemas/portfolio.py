@@ -9,6 +9,7 @@ SupportedPeriod = Literal["1y", "3y", "5y", "10y", "max"]
 PriceSource = Literal["yahoo_finance", "csv"]
 RiskFactorType = Literal["major_index", "asset_fx", "asset"]
 RiskDirection = Literal["up", "down"]
+OptimizeObjective = Literal["min_volatility", "max_sharpe", "efficient_frontier"]
 
 
 class AssetInput(BaseModel):
@@ -101,6 +102,38 @@ class RiskStrategyResponse(BaseModel):
     hedge_ratio: float | None = None
     portfolio_volatility: float | None = None
     factor_volatility: float | None = None
+    warnings: list[str]
+
+
+class OptimizePortfolioRequest(AnalyzePortfolioRequest):
+    objective: OptimizeObjective = "max_sharpe"
+    allow_short: bool = False
+    max_weight: float = Field(default=1.0, ge=0.01, le=1.0)
+    min_weight: float = Field(default=0.0, ge=0.0, le=1.0)
+    risk_free_rate: float = Field(default=0.05, ge=0.0, le=1.0)
+    n_frontier_points: int = Field(default=30, ge=5, le=100)
+
+
+class FrontierPointSchema(BaseModel):
+    expected_return: float
+    expected_volatility: float
+    sharpe_ratio: float
+    weights: dict[str, float]
+
+
+class OptimizePortfolioResponse(BaseModel):
+    portfolio_name: str
+    report_currency: str
+    period: SupportedPeriod
+    objective: OptimizeObjective
+    optimal_weights: dict[str, float]
+    expected_return: float
+    expected_volatility: float
+    sharpe_ratio: float
+    current_weights: dict[str, float]
+    frontier_points: list[FrontierPointSchema]
+    solver: str
+    solver_status: str
     warnings: list[str]
 
 

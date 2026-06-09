@@ -1,4 +1,4 @@
-﻿import type { AnalyzeRequest, AnalyzeResponse, RiskStrategyRequest, RiskStrategyResponse, StrategyRecommendRequest } from "@/lib/types";
+﻿import type { AnalyzeRequest, AnalyzeResponse, OptimizeRequest, OptimizeResponse, RiskStrategyRequest, RiskStrategyResponse, StrategyRecommendRequest } from "@/lib/types";
 
 export type TickerSearchResult = {
   symbol: string;
@@ -64,6 +64,18 @@ export async function analyzeRiskStrategy(payload: RiskStrategyRequest): Promise
   }
 
   return response.json() as Promise<RiskStrategyResponse>;
+}
+
+export async function optimizePortfolio(payload: OptimizeRequest): Promise<OptimizeResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/portfolio/optimize`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    await parseError(response);
+  }
+  return response.json() as Promise<OptimizeResponse>;
 }
 
 export async function streamStrategyRecommendation(
