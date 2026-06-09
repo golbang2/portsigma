@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -1055,171 +1055,6 @@ export default function HomePage() {
             </div>
           </section>
 
-          <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Risk Strategy Prep</p>
-            <h2 className="mt-2 text-2xl font-semibold text-ink">{t.riskSectionTitle}</h2>
-            <div className="mt-5 flex flex-col gap-3 text-base text-slate-700 lg:flex-row lg:items-center lg:gap-4">
-              <span className="hidden lg:inline">{t.riskPrefix}</span>
-              <select
-                value={selectedRiskFactorValue}
-                onChange={(event) => {
-                  setSelectedRiskFactorValue(event.target.value);
-                  setRiskResult(null);
-                  setRiskErrorMessage("");
-                }}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-ember lg:w-auto lg:min-w-[280px]"
-              >
-                {riskFactorOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              {t.riskConnector ? <span className="hidden lg:inline">{t.riskConnector}</span> : null}
-              <select
-                value={riskDirection}
-                onChange={(event) => {
-                  setRiskDirection(event.target.value as RiskDirection);
-                  setRiskResult(null);
-                  setRiskErrorMessage("");
-                }}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-ember lg:w-[120px]"
-              >
-                <option value="up">{t.directionUp}</option>
-                <option value="down">{t.directionDown}</option>
-              </select>
-              <span className="hidden lg:inline">{t.riskSuffix}</span>
-            </div>
-            <div className="mt-5 flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={handleRiskStrategyAnalyze}
-                disabled={!selectedRiskFactor || isRiskLoading}
-                className="rounded-full bg-ink px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isRiskLoading ? t.riskAnalyzing : t.riskAnalyzeBtn}
-              </button>
-              {selectedRiskFactor ? <p className="text-sm text-slate-500">{t.selectedFactor} {selectedRiskFactor.label}</p> : null}
-            </div>
-
-            {riskErrorMessage ? (
-              <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{riskErrorMessage}</div>
-            ) : null}
-
-            {riskResult ? (
-              <div className="mt-5 grid gap-3 sm:mt-6 sm:gap-4 md:grid-cols-3">
-                <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.corrWithPortfolio}</p>
-                  <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.correlation, 3)}</p>
-                </div>
-                <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                  <div className="flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-slate-500">
-                    <span>{t.beta}</span>
-                    <VolatilityTooltip text={t.betaDesc} />
-                  </div>
-                  <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.beta, 3)}</p>
-                </div>
-                <div className="rounded-2xl bg-slate-50 px-4 py-4">
-                  <div className="flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-slate-500">
-                    <span>{t.hedgeRatio}</span>
-                    <VolatilityTooltip text={t.hedgeRatioTooltip} />
-                  </div>
-                  <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.hedge_ratio, 3)}</p>
-                </div>
-              </div>
-            ) : null}
-
-            {riskResult?.warnings.length ? (
-              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                {riskResult.warnings.map((warning) => (
-                  <p key={warning}>{warning}</p>
-                ))}
-              </div>
-            ) : null}
-
-            {riskResult ? (
-              <div className="mt-6 border-t border-slate-100 pt-6">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.24em] text-slate-500">AI Strategy</p>
-                    <h3 className="mt-1 text-lg font-semibold text-ink">{t.aiHedgeTitle}</h3>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleRecommend}
-                    disabled={isRecommending}
-                    className="rounded-full bg-pine px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isRecommending ? t.generating : t.getRecommendation}
-                  </button>
-                </div>
-
-                <div className="mt-4">
-                  <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                    OpenAI API Key
-                    <span className="ml-1 font-normal text-slate-400">{t.sessionSaved}</span>
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type={showApiKey ? "text" : "password"}
-                      value={openaiApiKey}
-                      onChange={(e) => handleApiKeyChange(e.target.value)}
-                      placeholder="sk-..."
-                      autoComplete="off"
-                      spellCheck={false}
-                      className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-700 placeholder-slate-300 outline-none focus:border-pine focus:ring-1 focus:ring-pine"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowApiKey((v) => !v)}
-                      className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-500 hover:bg-slate-50"
-                    >
-                      {showApiKey ? t.hide : t.show}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                    {t.additionalContext}
-                    <span className="ml-1 font-normal text-slate-400">{t.optional}</span>
-                  </label>
-                  <textarea
-                    value={userContext}
-                    onChange={(e) => setUserContext(e.target.value)}
-                    maxLength={1000}
-                    rows={3}
-                    placeholder={t.contextPlaceholder}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder-slate-300 outline-none focus:border-pine focus:ring-1 focus:ring-pine resize-none"
-                  />
-                </div>
-
-                {recommendError ? (
-                  <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {recommendError}
-                  </div>
-                ) : null}
-
-                {(recommendation || isRecommending) ? (
-                  <div className="mt-4 rounded-2xl bg-slate-50 px-5 py-5 text-sm leading-7 text-slate-700
-                    [&_h1]:mb-2 [&_h1]:mt-4 [&_h1]:text-base [&_h1]:font-semibold [&_h1]:text-ink
-                    [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-ink
-                    [&_h3]:mb-1 [&_h3]:mt-3 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-ink
-                    [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5
-                    [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5
-                    [&_li]:my-0.5
-                    [&_strong]:font-semibold [&_strong]:text-ink
-                    [&_p]:my-1.5">
-                    <ReactMarkdown>{recommendation}</ReactMarkdown>
-                    {isRecommending ? (
-                      <span className="inline-block h-4 w-0.5 animate-pulse bg-slate-400" />
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </section>
-
           {/* 포트폴리오 최적화 섹션 */}
           <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Optimization</p>
@@ -1507,6 +1342,171 @@ export default function HomePage() {
                 {optimizeResult.warnings.length > 0 ? (
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                     {optimizeResult.warnings.map((w) => <p key={w}>{w}</p>)}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </section>
+
+          <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Risk Strategy Prep</p>
+            <h2 className="mt-2 text-2xl font-semibold text-ink">{t.riskSectionTitle}</h2>
+            <div className="mt-5 flex flex-col gap-3 text-base text-slate-700 lg:flex-row lg:items-center lg:gap-4">
+              <span className="hidden lg:inline">{t.riskPrefix}</span>
+              <select
+                value={selectedRiskFactorValue}
+                onChange={(event) => {
+                  setSelectedRiskFactorValue(event.target.value);
+                  setRiskResult(null);
+                  setRiskErrorMessage("");
+                }}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-ember lg:w-auto lg:min-w-[280px]"
+              >
+                {riskFactorOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {t.riskConnector ? <span className="hidden lg:inline">{t.riskConnector}</span> : null}
+              <select
+                value={riskDirection}
+                onChange={(event) => {
+                  setRiskDirection(event.target.value as RiskDirection);
+                  setRiskResult(null);
+                  setRiskErrorMessage("");
+                }}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-ember lg:w-[120px]"
+              >
+                <option value="up">{t.directionUp}</option>
+                <option value="down">{t.directionDown}</option>
+              </select>
+              <span className="hidden lg:inline">{t.riskSuffix}</span>
+            </div>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleRiskStrategyAnalyze}
+                disabled={!selectedRiskFactor || isRiskLoading}
+                className="rounded-full bg-ink px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isRiskLoading ? t.riskAnalyzing : t.riskAnalyzeBtn}
+              </button>
+              {selectedRiskFactor ? <p className="text-sm text-slate-500">{t.selectedFactor} {selectedRiskFactor.label}</p> : null}
+            </div>
+
+            {riskErrorMessage ? (
+              <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{riskErrorMessage}</div>
+            ) : null}
+
+            {riskResult ? (
+              <div className="mt-5 grid gap-3 sm:mt-6 sm:gap-4 md:grid-cols-3">
+                <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{t.corrWithPortfolio}</p>
+                  <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.correlation, 3)}</p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                  <div className="flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-slate-500">
+                    <span>{t.beta}</span>
+                    <VolatilityTooltip text={t.betaDesc} />
+                  </div>
+                  <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.beta, 3)}</p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 px-4 py-4">
+                  <div className="flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-slate-500">
+                    <span>{t.hedgeRatio}</span>
+                    <VolatilityTooltip text={t.hedgeRatioTooltip} />
+                  </div>
+                  <p className="mt-2 text-2xl font-semibold text-ink">{formatSignedNumber(riskResult.hedge_ratio, 3)}</p>
+                </div>
+              </div>
+            ) : null}
+
+            {riskResult?.warnings.length ? (
+              <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                {riskResult.warnings.map((warning) => (
+                  <p key={warning}>{warning}</p>
+                ))}
+              </div>
+            ) : null}
+
+            {riskResult ? (
+              <div className="mt-6 border-t border-slate-100 pt-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.24em] text-slate-500">AI Strategy</p>
+                    <h3 className="mt-1 text-lg font-semibold text-ink">{t.aiHedgeTitle}</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRecommend}
+                    disabled={isRecommending}
+                    className="rounded-full bg-pine px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isRecommending ? t.generating : t.getRecommendation}
+                  </button>
+                </div>
+
+                <div className="mt-4">
+                  <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                    OpenAI API Key
+                    <span className="ml-1 font-normal text-slate-400">{t.sessionSaved}</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type={showApiKey ? "text" : "password"}
+                      value={openaiApiKey}
+                      onChange={(e) => handleApiKeyChange(e.target.value)}
+                      placeholder="sk-..."
+                      autoComplete="off"
+                      spellCheck={false}
+                      className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-700 placeholder-slate-300 outline-none focus:border-pine focus:ring-1 focus:ring-pine"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey((v) => !v)}
+                      className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-500 hover:bg-slate-50"
+                    >
+                      {showApiKey ? t.hide : t.show}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                    {t.additionalContext}
+                    <span className="ml-1 font-normal text-slate-400">{t.optional}</span>
+                  </label>
+                  <textarea
+                    value={userContext}
+                    onChange={(e) => setUserContext(e.target.value)}
+                    maxLength={1000}
+                    rows={3}
+                    placeholder={t.contextPlaceholder}
+                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder-slate-300 outline-none focus:border-pine focus:ring-1 focus:ring-pine resize-none"
+                  />
+                </div>
+
+                {recommendError ? (
+                  <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {recommendError}
+                  </div>
+                ) : null}
+
+                {(recommendation || isRecommending) ? (
+                  <div className="mt-4 rounded-2xl bg-slate-50 px-5 py-5 text-sm leading-7 text-slate-700
+                    [&_h1]:mb-2 [&_h1]:mt-4 [&_h1]:text-base [&_h1]:font-semibold [&_h1]:text-ink
+                    [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-ink
+                    [&_h3]:mb-1 [&_h3]:mt-3 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-ink
+                    [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5
+                    [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5
+                    [&_li]:my-0.5
+                    [&_strong]:font-semibold [&_strong]:text-ink
+                    [&_p]:my-1.5">
+                    <ReactMarkdown>{recommendation}</ReactMarkdown>
+                    {isRecommending ? (
+                      <span className="inline-block h-4 w-0.5 animate-pulse bg-slate-400" />
+                    ) : null}
                   </div>
                 ) : null}
               </div>
