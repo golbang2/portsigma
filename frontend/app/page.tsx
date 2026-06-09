@@ -1059,7 +1059,6 @@ export default function HomePage() {
           <section className="mt-6 rounded-[24px] border border-white/70 bg-white/80 p-5 shadow-panel backdrop-blur sm:mt-8 sm:rounded-[30px] sm:p-6">
             <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Optimization</p>
             <h2 className="mt-2 text-2xl font-semibold text-ink">{t.optimizeSectionTitle}</h2>
-            <p className="mt-1 text-sm text-slate-500">GARCH/DCC 기반 공분산 행렬로 최적 비중을 계산합니다.</p>
 
             {/* 목적함수 선택 */}
             <div className="mt-5">
