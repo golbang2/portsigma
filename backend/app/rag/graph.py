@@ -42,6 +42,9 @@ def _classify(p: StrategyRecommendRequest) -> str:
     vol  = p.portfolio_volatility or 0.0
     mdd  = p.max_drawdown or 0.0
 
+    corr = abs(p.correlation or 0.0)
+    if corr < 0.3:
+        return "low_correlation"
     if beta > 1.2 and (var < -0.02 or p.direction == "down"):
         return "high_market_risk"
     if vol > 0.30 or mdd < -0.20:
@@ -53,6 +56,10 @@ def _classify(p: StrategyRecommendRequest) -> str:
 # attempt=0: 1차 각도 (구체적 전술), attempt=1: 2차 각도 (원리·대안)
 
 _RISK_ANGLES: dict[str, list[str]] = {
+    "low_correlation": [
+        "낮은 상관관계 헤지 실익 없음 분산 리밸런싱 대안 전략",
+        "무상관 포트폴리오 자연 분산 효과 요인 재탐색",
+    ],
     "high_market_risk": [
         "시장 지수 하락 베타 헤지 인버스 ETF 선물 풋옵션",
         "포트폴리오 시장 민감도 방어 상관관계 분산 채권 편입",
@@ -81,6 +88,7 @@ def _angle_query(risk_class: str, attempt: int) -> str:
 
 # 리스크 유형별로 기대하는 핵심 키워드
 _CLASS_KEYWORDS: dict[str, list[str]] = {
+    "low_correlation": ["상관관계", "분산", "리밸런싱", "낮은"],
     "high_market_risk": ["베타", "인버스", "헤지비율", "선물", "풋옵션"],
     "fx_dominant":      ["환율", "FX", "환헤지", "통화", "달러"],
     "high_volatility":  ["변동성", "VaR", "CVaR", "MDD", "리밸런싱"],

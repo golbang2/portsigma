@@ -45,39 +45,10 @@ def _fmt(v: float | None, pct: bool = False, d: int = 2) -> str:
     return f"{v * 100:.{d}f}%" if pct else f"{v:.{d}f}"
 
 
-def _low_correlation_response(payload: StrategyRecommendRequest) -> Iterator[str]:
-    """상관계수가 낮아 헤지 실익이 없을 때 LLM 없이 반환하는 응답."""
-    corr = payload.correlation or 0
-    beta = payload.beta or 0
-    factor = payload.factor_label
-    direction = "상승" if payload.direction == "up" else "하락"
-    text = (
-        f"## 1. 현재 리스크 진단\n\n"
-        f"포트폴리오와 {factor}의 상관계수는 {corr:.3f}, 베타는 {beta:.3f}로 "
-        f"통계적으로 유의미한 연관성이 없습니다.\n\n"
-        f"## 2. 헤지 실익 없음\n\n"
-        f"{factor} {direction} 리스크에 대한 헤지는 **실익이 없습니다**. "
-        f"상관계수 절댓값이 {abs(corr):.3f}로 0.3 미만이면 해당 요인이 포트폴리오 손익에 "
-        f"거의 영향을 미치지 않기 때문에, 헤지 수단을 편입해도 리스크 상쇄 효과가 발생하지 않고 "
-        f"비용(수수료·스프레드·기회비용)만 발생합니다.\n\n"
-        f"## 3. 대안적 리스크 관리 방향\n\n"
-        f"- **실제 리스크 요인 재탐색**: 포트폴리오 변동성의 주된 원인이 되는 다른 요인(섹터·환율·금리 등)을 분석해 해당 요인 기준으로 헤지 전략을 검토하세요.\n"
-        f"- **분산 강화**: 현재 보유 자산 간 상관관계를 점검하고, 상관도가 낮은 자산군을 추가해 포트폴리오 전체 변동성을 낮추는 방향을 우선 고려하세요.\n"
-        f"- **비중 조정**: 특정 자산에 쏠림이 있다면 리밸런싱을 통해 집중 리스크를 줄이는 것이 헤지보다 비용 효율적입니다.\n"
-    )
-    yield text
-
-
 def stream_strategy_recommendation(payload: StrategyRecommendRequest) -> Iterator[str]:
     api_key = payload.openai_api_key or os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise ValueError("OpenAI API 키가 필요합니다. 키를 입력해주세요.")
-
-    corr_abs = abs(payload.correlation or 0)
-    beta_abs = abs(payload.beta or 0)
-    if corr_abs < 0.3:
-        yield from _low_correlation_response(payload)
-        return
 
     direction_label = "상승" if payload.direction == "up" else "하락"
 
@@ -86,6 +57,7 @@ def stream_strategy_recommendation(payload: StrategyRecommendRequest) -> Iterato
     docs_text = "\n\n---\n\n".join(docs) if docs else "관련 문서를 찾지 못했습니다."
 
     _RISK_CLASS_LABEL = {
+        "low_correlation":  "낮은 상관관계 — 이 요인과의 헤지 실익 없음",
         "high_market_risk": "시장 리스크 높음 (고베타·하락 방향)",
         "fx_dominant":      "환율 리스크 지배적",
         "high_volatility":  "고변동성 포트폴리오",
