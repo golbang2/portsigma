@@ -6,26 +6,27 @@ from functools import lru_cache
 
 import requests
 
-_FALLBACK_RATE = 0.026
-_FALLBACK_SOURCE = "고정값 (2.6%)"
+# KOFR fallback: updated 2026-06
+_FALLBACK_RATE = 0.02510
+_FALLBACK_SOURCE = "고정값 (2.510%)"
 
+# BOK ECOS API — 시장금리(일별) 817Y002
+# KOFR item code: 010700000 (무위험지표금리)
+# NOTE: StatisticSearch requires a real BOK_API_KEY (sample key is read-only for listings)
 _ECOS_URL = (
     "https://ecos.bok.or.kr/api/StatisticSearch"
-    "/{key}/json/kr/1/1/817Y002/DD/{start}/{end}/0101000"
+    "/{key}/json/kr/1/10/817Y002/DD/{start}/{end}/010700000"
 )
-# SOFR from FRED public CSV — no API key required
-_SOFR_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=SOFR"
 
 
 @lru_cache(maxsize=1)
 def _fetch_cached(date_key: str) -> tuple[float, str]:
-    """Try BOK KOFR → SOFR(FRED) → fixed fallback. Cached per calendar day."""
-    # --- 1. BOK KOFR ---
+    """Try BOK ECOS → fixed fallback. Cached per calendar day."""
     api_key = os.getenv("BOK_API_KEY")
     if api_key:
         try:
             end = date.today()
-            start = end - timedelta(days=30)
+            start = end - timedelta(days=14)
             url = _ECOS_URL.format(
                 key=api_key,
                 start=start.strftime("%Y%m%d"),
@@ -33,24 +34,12 @@ def _fetch_cached(date_key: str) -> tuple[float, str]:
             )
             resp = requests.get(url, timeout=5)
             resp.raise_for_status()
-            rows = resp.json().get("StatisticSearch", {}).get("row", [])
+            data = resp.json()
+            rows = data.get("StatisticSearch", {}).get("row", [])
             if rows:
                 return float(rows[-1]["DATA_VALUE"]) / 100.0, "KOFR (BOK)"
         except Exception:  # noqa: BLE001
             pass
-
-    # --- 2. SOFR (FRED, no key needed) ---
-    try:
-        resp = requests.get(_SOFR_URL, timeout=5)
-        resp.raise_for_status()
-        lines = [l for l in resp.text.strip().splitlines() if not l.startswith("DATE")]
-        if lines:
-            last = lines[-1].split(",")
-            val = last[1].strip()
-            if val and val != ".":
-                return float(val) / 100.0, "SOFR (FRED)"
-    except Exception:  # noqa: BLE001
-        pass
 
     return _FALLBACK_RATE, _FALLBACK_SOURCE
 

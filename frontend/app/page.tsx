@@ -187,7 +187,7 @@ export default function HomePage() {
   const [optimizeMaxWeight, setOptimizeMaxWeight] = useState(1.0);
   const [optimizeMinWeight, setOptimizeMinWeight] = useState(0.0);
   const [optimizeAllowShort, setOptimizeAllowShort] = useState(false);
-  const [optimizeRfRate, setOptimizeRfRate] = useState(0.026);
+  const [optimizeRfRate, setOptimizeRfRate] = useState(0.02510);
   const [rfRateSource, setRfRateSource] = useState<string | null>(null);
   const [optimizeResult, setOptimizeResult] = useState<OptimizeResponse | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
