@@ -4,8 +4,6 @@ import React, { ChangeEvent, useEffect, useMemo, useRef, useState } from "react"
 import {
   Area,
   AreaChart,
-  Bar,
-  BarChart,
   CartesianGrid,
   Cell,
   Legend,
@@ -1347,28 +1345,64 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* 현재 vs 최적 비중 Bar Chart */}
+                {/* 현재 vs 최적 비중 Pie Charts */}
                 <div>
                   <h3 className="mb-3 text-base font-semibold text-ink">{t.optimalWeights}</h3>
-                  <div className="h-64 rounded-2xl bg-slate-50 px-3 py-4 sm:h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={Object.keys(optimizeResult.optimal_weights).map((name) => ({
-                          name,
-                          current: Number(((optimizeResult.current_weights[name] ?? 0) * 100).toFixed(2)),
-                          optimal: Number(((optimizeResult.optimal_weights[name] ?? 0) * 100).toFixed(2)),
-                        }))}
-                        margin={{ top: 4, right: 8, left: 0, bottom: 4 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#d6d3d1" />
-                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-                        <YAxis tickFormatter={(v: number) => `${v}%`} tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-                        <Tooltip formatter={(value: number) => [`${value}%`]} />
-                        <Legend formatter={(value) => value === "current" ? t.currentWeightsLabel : t.optimalWeightsLabel} />
-                        <Bar dataKey="current" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="optimal" fill="#f97316" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {/* 현재 포트폴리오 */}
+                    <div className="rounded-2xl bg-slate-50 px-3 py-4">
+                      <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{t.currentWeightsLabel}</p>
+                      <div className="h-56">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={Object.keys(optimizeResult.current_weights).map((name) => ({
+                                name,
+                                value: Number(((optimizeResult.current_weights[name] ?? 0) * 100).toFixed(2)),
+                              }))}
+                              dataKey="value"
+                              nameKey="name"
+                              innerRadius={50}
+                              outerRadius={80}
+                              paddingAngle={2}
+                            >
+                              {Object.keys(optimizeResult.current_weights).map((name, i) => (
+                                <Cell key={name} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(v: number) => [`${v}%`]} />
+                            <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                    {/* 최적 포트폴리오 */}
+                    <div className="rounded-2xl bg-slate-50 px-3 py-4">
+                      <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.18em] text-ember">{t.optimalWeightsLabel}</p>
+                      <div className="h-56">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={Object.keys(optimizeResult.optimal_weights).map((name) => ({
+                                name,
+                                value: Number(((optimizeResult.optimal_weights[name] ?? 0) * 100).toFixed(2)),
+                              }))}
+                              dataKey="value"
+                              nameKey="name"
+                              innerRadius={50}
+                              outerRadius={80}
+                              paddingAngle={2}
+                            >
+                              {Object.keys(optimizeResult.optimal_weights).map((name, i) => (
+                                <Cell key={name} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(v: number) => [`${v}%`]} />
+                            <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
