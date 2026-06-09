@@ -283,6 +283,7 @@ export default function HomePage() {
       max_drawdown: result?.max_drawdown ?? null,
       sharpe_ratio: result?.sharpe_ratio ?? null,
       asset_names: result?.assets.map((a) => a.asset) ?? [],
+      factor_type: riskResult?.factor_type ?? null,
       openai_api_key: openaiApiKey || undefined,
       user_context: userContext.trim() || undefined,
     };

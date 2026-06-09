@@ -133,6 +133,7 @@ export type StrategyRecommendRequest = {
   max_drawdown?: number | null;
   sharpe_ratio?: number | null;
   asset_names?: string[];
+  factor_type?: RiskFactorType | null;
   openai_api_key?: string;
   user_context?: string;
 };
