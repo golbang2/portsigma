@@ -155,5 +155,6 @@ class StrategyRecommendRequest(BaseModel):
     max_drawdown: float | None = None
     sharpe_ratio: float | None = None
     asset_names: list[str] = Field(default_factory=list, max_length=15)
+    factor_type: RiskFactorType | None = None
     openai_api_key: str | None = None
     user_context: str = Field(default="", max_length=1000)
