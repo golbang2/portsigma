@@ -1,5 +1,5 @@
 """
-LangGraph 기반 RAG 워크플로우
+RAG 워크플로우 (순수 Python)
 
 흐름:
   classify_risk → build_query → retrieve_docs → check_sufficiency
@@ -10,30 +10,13 @@ LangGraph 기반 RAG 워크플로우
 """
 from __future__ import annotations
 
-from typing import Literal, TypedDict
-
-from langgraph.graph import END, StateGraph
-
 from app.rag.engine import retrieve
-from app.schemas.portfolio import RiskFactorType, StrategyRecommendRequest
-
-
-# ── State ──────────────────────────────────────────────────────────────────────
-
-class RAGState(TypedDict):
-    payload:    StrategyRecommendRequest
-    api_key:    str | None
-    risk_class: str          # "high_market_risk" | "fx_dominant" | "high_volatility" | "general"
-    query:      str
-    docs:       list[str]
-    attempts:   int          # retrieval 시도 횟수
-    sufficient: bool         # 문서 충분 여부
+from app.schemas.portfolio import StrategyRecommendRequest
 
 
 # ── Risk classification ────────────────────────────────────────────────────────
 
 def _classify(p: StrategyRecommendRequest) -> str:
-    """포트폴리오 수치와 factor_type을 보고 리스크 유형을 분류한다."""
     if p.factor_type == "asset_fx":
         return "fx_dominant"
 
@@ -50,7 +33,6 @@ def _classify(p: StrategyRecommendRequest) -> str:
 
 
 # ── 리스크 유형별 쿼리 각도 ────────────────────────────────────────────────────
-# attempt=0: 1차 각도 (구체적 전술), attempt=1: 2차 각도 (원리·대안)
 
 _RISK_ANGLES: dict[str, list[str]] = {
     "high_market_risk": [
@@ -71,15 +53,6 @@ _RISK_ANGLES: dict[str, list[str]] = {
     ],
 }
 
-
-def _angle_query(risk_class: str, attempt: int) -> str:
-    angles = _RISK_ANGLES.get(risk_class, _RISK_ANGLES["general"])
-    return angles[min(attempt, len(angles) - 1)]
-
-
-# ── Sufficiency check ─────────────────────────────────────────────────────────
-
-# 리스크 유형별로 기대하는 핵심 키워드
 _CLASS_KEYWORDS: dict[str, list[str]] = {
     "high_market_risk": ["베타", "인버스", "헤지비율", "선물", "풋옵션"],
     "fx_dominant":      ["환율", "FX", "환헤지", "통화", "달러"],
@@ -88,16 +61,18 @@ _CLASS_KEYWORDS: dict[str, list[str]] = {
 }
 
 
+def _angle_query(risk_class: str, attempt: int) -> str:
+    angles = _RISK_ANGLES.get(risk_class, _RISK_ANGLES["general"])
+    return angles[min(attempt, len(angles) - 1)]
+
+
 def _is_sufficient(docs: list[str], risk_class: str) -> bool:
     if len(docs) < 2:
         return False
     keywords = _CLASS_KEYWORDS.get(risk_class, _CLASS_KEYWORDS["general"])
     combined = " ".join(docs)
-    hits = sum(1 for kw in keywords if kw in combined)
-    return hits >= 2
+    return sum(1 for kw in keywords if kw in combined) >= 2
 
-
-# ── Query builder ─────────────────────────────────────────────────────────────
 
 def _fmt(v: float | None, pct: bool = False) -> str:
     if v is None:
@@ -123,95 +98,25 @@ def _base_query(p: StrategyRecommendRequest) -> str:
     return " ".join(parts)
 
 
-# ── Graph nodes ────────────────────────────────────────────────────────────────
-
-def node_classify_risk(state: RAGState) -> dict:
-    return {"risk_class": _classify(state["payload"])}
-
-
-def node_build_query(state: RAGState) -> dict:
-    p     = state["payload"]
-    base  = _base_query(p)
-    angle = _angle_query(state["risk_class"], state["attempts"])
-    return {"query": f"{base} {angle}"}
-
-
-def node_retrieve_docs(state: RAGState) -> dict:
-    docs = retrieve(
-        state["query"],
-        n_results=4,
-        factor_type=state["payload"].factor_type,
-        api_key=state["api_key"],
-    )
-    return {"docs": docs, "attempts": state["attempts"] + 1}
-
-
-def node_check_sufficiency(state: RAGState) -> dict:
-    return {"sufficient": _is_sufficient(state["docs"], state["risk_class"])}
-
-
-def node_refine_query(state: RAGState) -> dict:
-    """2차 시도: 핵심 지표 + 대체 각도 쿼리."""
-    p     = state["payload"]
-    angle = _angle_query(state["risk_class"], state["attempts"])
-    refined = f"{p.factor_label} 포트폴리오 {angle}"
-    return {"query": refined}
-
-
-# ── Conditional edge ───────────────────────────────────────────────────────────
-
-def _should_retry(state: RAGState) -> Literal["refine_query", "__end__"]:
-    if not state["sufficient"] and state["attempts"] < 2:
-        return "refine_query"
-    return "__end__"
-
-
-# ── Graph 빌드 ─────────────────────────────────────────────────────────────────
-
-def _build() -> StateGraph:
-    g = StateGraph(RAGState)
-
-    g.add_node("classify_risk",     node_classify_risk)
-    g.add_node("build_query",       node_build_query)
-    g.add_node("retrieve_docs",     node_retrieve_docs)
-    g.add_node("check_sufficiency", node_check_sufficiency)
-    g.add_node("refine_query",      node_refine_query)
-
-    g.set_entry_point("classify_risk")
-    g.add_edge("classify_risk",     "build_query")
-    g.add_edge("build_query",       "retrieve_docs")
-    g.add_edge("retrieve_docs",     "check_sufficiency")
-    g.add_conditional_edges(
-        "check_sufficiency",
-        _should_retry,
-        {"refine_query": "refine_query", "__end__": END},
-    )
-    g.add_edge("refine_query", "retrieve_docs")
-
-    return g.compile()
-
-
-rag_graph = _build()
-
-
 # ── 공개 인터페이스 ─────────────────────────────────────────────────────────────
 
 def run_rag(
     payload: StrategyRecommendRequest,
     api_key: str | None = None,
 ) -> tuple[list[str], str]:
-    """
-    LangGraph 워크플로우를 실행하고 (최종 검색 문서들, 리스크 분류) 를 반환한다.
-    LLM 스트리밍은 호출부(strategy_recommend.py)에서 담당한다.
-    """
-    initial: RAGState = {
-        "payload":    payload,
-        "api_key":    api_key,
-        "risk_class": "",
-        "query":      "",
-        "docs":       [],
-        "attempts":   0,
-        "sufficient": False,
-    }
-    final = rag_graph.invoke(initial)
-    return final["docs"], final["risk_class"]
+    """RAG 워크플로우 실행. (최종 검색 문서들, 리스크 분류) 반환."""
+    risk_class = _classify(payload)
+
+    # 1차 검색
+    base  = _base_query(payload)
+    angle = _angle_query(risk_class, 0)
+    docs  = retrieve(f"{base} {angle}", n_results=4,
+                     factor_type=payload.factor_type, api_key=api_key)
+
+    # 충분성 체크 → 부족하면 1회 재시도
+    if not _is_sufficient(docs, risk_class):
+        refined = f"{payload.factor_label} 포트폴리오 {_angle_query(risk_class, 1)}"
+        docs = retrieve(refined, n_results=4,
+                        factor_type=payload.factor_type, api_key=api_key)
+
+    return docs, risk_class
