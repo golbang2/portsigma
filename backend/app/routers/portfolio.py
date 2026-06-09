@@ -14,6 +14,7 @@ from app.schemas.portfolio import (
     RiskStrategyResponse,
     StrategyRecommendRequest,
 )
+from app.services.kofr import get_kofr
 from app.services.market_data import fetch_current_price, search_ticker
 from app.services.optimize import run_portfolio_optimization
 from app.services.portfolio import analyze_portfolio, analyze_risk_strategy
@@ -36,6 +37,12 @@ def ticker_price_endpoint(request: Request, ticker: str = Query(min_length=1, ma
         return fetch_current_price(ticker.strip())
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/portfolio/risk-free-rate")
+@limiter.limit("30/minute")
+def risk_free_rate_endpoint(request: Request) -> dict:
+    return {"rate": get_kofr(), "source": "KOFR"}
 
 
 @router.post("/portfolio/analyze", response_model=AnalyzePortfolioResponse)

@@ -110,7 +110,7 @@ class OptimizePortfolioRequest(AnalyzePortfolioRequest):
     allow_short: bool = False
     max_weight: float = Field(default=1.0, ge=0.01, le=1.0)
     min_weight: float = Field(default=0.0, ge=0.0, le=1.0)
-    risk_free_rate: float = Field(default=0.05, ge=0.0, le=1.0)
+    risk_free_rate: float = Field(default=0.026, ge=0.0, le=1.0)
     n_frontier_points: int = Field(default=30, ge=5, le=100)
 
 

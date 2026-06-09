@@ -24,7 +24,7 @@ import ReactMarkdown from "react-markdown";
 
 import { AssetEditor } from "@/components/AssetEditor";
 import { MetricCard } from "@/components/MetricCard";
-import { analyzePortfolio, analyzeRiskStrategy, optimizePortfolio, streamStrategyRecommendation, warmupBackend } from "@/lib/api";
+import { analyzePortfolio, analyzeRiskStrategy, fetchRiskFreeRate, optimizePortfolio, streamStrategyRecommendation, warmupBackend } from "@/lib/api";
 import { useLang } from "@/lib/language-context";
 import { DEFAULT_PRICE_CSV, HISTORY_PERIODS, MAJOR_INDEX_OPTIONS, REPORT_CURRENCIES } from "@/lib/constants";
 import { assetsToPortfolioCsv, parsePortfolioCsv } from "@/lib/portfolio-csv";
@@ -187,7 +187,7 @@ export default function HomePage() {
   const [optimizeMaxWeight, setOptimizeMaxWeight] = useState(1.0);
   const [optimizeMinWeight, setOptimizeMinWeight] = useState(0.0);
   const [optimizeAllowShort, setOptimizeAllowShort] = useState(false);
-  const [optimizeRfRate, setOptimizeRfRate] = useState(0.05);
+  const [optimizeRfRate, setOptimizeRfRate] = useState(0.026);
   const [optimizeResult, setOptimizeResult] = useState<OptimizeResponse | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizeError, setOptimizeError] = useState("");
@@ -197,6 +197,7 @@ export default function HomePage() {
 
   useEffect(() => {
     warmupBackend().then(setBackendReady);
+    fetchRiskFreeRate().then((rate) => { if (rate !== null) setOptimizeRfRate(rate); });
   }, []);
 
   useEffect(() => {
