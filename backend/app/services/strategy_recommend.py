@@ -93,6 +93,23 @@ def stream_strategy_recommendation(payload: StrategyRecommendRequest) -> Iterato
     if payload.asset_names:
         metrics_lines.append(f"- 보유 자산: {', '.join(payload.asset_names)}")
 
+    corr_abs = abs(payload.correlation or 0)
+    beta_abs = abs(payload.beta or 0)
+    if corr_abs < 0.3:
+        hedge_directive = (
+            f"⚠️ 주의: 상관계수 절댓값이 {corr_abs:.3f}로 0.3 미만입니다. "
+            "이 요인과 포트폴리오의 연관성이 매우 낮으므로, 이 요인을 이용한 헤지는 실익이 없습니다. "
+            "반드시 '헤지 실익 없음'을 명확히 진단하고, 헤지 전략 대신 대안적 리스크 관리 방향만 제시하세요. "
+            "절대로 헤지 전략을 권장하지 마세요."
+        )
+    elif beta_abs < 0.3 and corr_abs < 0.4:
+        hedge_directive = (
+            f"⚠️ 주의: 베타({beta_abs:.3f})와 상관계수({corr_abs:.3f}) 모두 낮습니다. "
+            "시장 노출이 작으므로 헤지보다 분산·리밸런싱 관점으로 조언하세요."
+        )
+    else:
+        hedge_directive = "수치를 근거로 구체적인 헤지 방향과 실행 고려사항을 설명해주세요."
+
     user_message = f"""## 포트폴리오 분석 결과
 
 {chr(10).join(metrics_lines)}
@@ -101,7 +118,7 @@ def stream_strategy_recommendation(payload: StrategyRecommendRequest) -> Iterato
 
 {docs_text}
 
-위 분석 수치를 근거로 구체적인 헤지 방향과 실행 고려사항을 설명해주세요.
+{hedge_directive}
 자산군 범주와 함께 대표적 상품 유형(예: 국내 대표지수 인버스 ETF 계열, 장기채권 ETF 계열 등)을 예시로 들어 실용적으로 안내해주세요.
 개별 종목 코드나 특정 ETF 티커는 명시하지 말고, 상품 유형과 전략 구조 수준으로 제시해주세요."""
 
