@@ -14,7 +14,7 @@ from app.schemas.portfolio import (
     RiskStrategyResponse,
     StrategyRecommendRequest,
 )
-from app.services.market_data import search_ticker
+from app.services.market_data import fetch_current_price, search_ticker
 from app.services.optimize import run_portfolio_optimization
 from app.services.portfolio import analyze_portfolio, analyze_risk_strategy
 from app.services.strategy_recommend import stream_strategy_recommendation
@@ -27,6 +27,15 @@ limiter = Limiter(key_func=get_remote_address)
 @limiter.limit("60/minute")
 def search_ticker_endpoint(request: Request, q: str = Query(min_length=1, max_length=100)) -> list[dict]:
     return search_ticker(q)
+
+
+@router.get("/portfolio/ticker-price")
+@limiter.limit("30/minute")
+def ticker_price_endpoint(request: Request, ticker: str = Query(min_length=1, max_length=20)) -> dict:
+    try:
+        return fetch_current_price(ticker.strip())
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post("/portfolio/analyze", response_model=AnalyzePortfolioResponse)

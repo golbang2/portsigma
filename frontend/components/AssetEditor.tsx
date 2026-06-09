@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { searchTicker, type TickerSearchResult } from "@/lib/api";
+import { fetchTickerPrice, searchTicker, type TickerSearchResult } from "@/lib/api";
 import { useLang } from "@/lib/language-context";
 import { REPORT_CURRENCIES } from "@/lib/constants";
 import type { AssetDraft } from "@/lib/types";
@@ -20,6 +20,8 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
   const [results, setResults] = useState<TickerSearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [searchError, setSearchError] = useState(false);
+  const [isFetchingPrice, setIsFetchingPrice] = useState(false);
+  const [priceAutofilled, setPriceAutofilled] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -75,7 +77,7 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
     }, 300);
   }
 
-  function handleSelect(result: TickerSearchResult) {
+  async function handleSelect(result: TickerSearchResult) {
     onChange({
       ...asset,
       ticker: result.symbol,
@@ -83,6 +85,21 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
     });
     setIsOpen(false);
     setResults([]);
+    setPriceAutofilled(false);
+
+    setIsFetchingPrice(true);
+    const data = await fetchTickerPrice(result.symbol);
+    setIsFetchingPrice(false);
+    if (data) {
+      onChange({
+        ...asset,
+        ticker: result.symbol,
+        name: asset.name || result.name,
+        purchase_price: data.price,
+        purchase_currency: data.currency,
+      });
+      setPriceAutofilled(true);
+    }
   }
 
   return (
@@ -167,14 +184,30 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
         </label>
 
         <div className="flex flex-col gap-2 text-sm text-slate-700">
-          <span>{t.purchasePrice}</span>
+          <div className="flex items-center gap-2">
+            <span>{t.purchasePrice}</span>
+            {isFetchingPrice && (
+              <svg className="h-3.5 w-3.5 animate-spin text-slate-400" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+              </svg>
+            )}
+            {priceAutofilled && !isFetchingPrice && (
+              <span className="rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-700">
+                현재가 자동입력
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-[1fr_92px] gap-2">
             <input
               type="number"
               min="0"
               step="0.0001"
               value={asset.purchase_price}
-              onChange={(event) => onChange({ ...asset, purchase_price: Number(event.target.value) })}
+              onChange={(event) => {
+                setPriceAutofilled(false);
+                onChange({ ...asset, purchase_price: Number(event.target.value) });
+              }}
               className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-ember"
             />
             <select

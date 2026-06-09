@@ -34,6 +34,16 @@ export async function searchTicker(q: string): Promise<TickerSearchResult[] | nu
   }
 }
 
+export async function fetchTickerPrice(ticker: string): Promise<{ price: number; currency: string } | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/portfolio/ticker-price?ticker=${encodeURIComponent(ticker)}`);
+    if (!response.ok) return null;
+    return response.json() as Promise<{ price: number; currency: string }>;
+  } catch {
+    return null;
+  }
+}
+
 export async function analyzePortfolio(payload: AnalyzeRequest): Promise<AnalyzeResponse> {
   const response = await fetch(`${API_BASE_URL}/api/v1/portfolio/analyze`, {
     method: "POST",

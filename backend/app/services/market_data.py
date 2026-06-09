@@ -60,6 +60,41 @@ def _search_yahoo(query: str) -> list[dict]:
     return output
 
 
+def fetch_current_price(ticker: str) -> dict:
+    """Return the latest close price and currency for a ticker."""
+    ticker_obj = yf.Ticker(ticker)
+    # Use 5d history to get the most recent close price quickly
+    for attempt in range(3):
+        try:
+            history = ticker_obj.history(period="5d", auto_adjust=True)
+            break
+        except Exception as exc:  # noqa: BLE001
+            try:
+                from yfinance.exceptions import YFRateLimitError
+                is_rate_limit = isinstance(exc, YFRateLimitError)
+            except ImportError:
+                is_rate_limit = False
+            msg = str(exc).lower()
+            if (is_rate_limit or "429" in msg or "rate limit" in msg) and attempt < 2:
+                time.sleep(1.5 * (attempt + 1))
+                continue
+            raise ValueError(f"'{ticker}' 현재가 조회에 실패했습니다: {exc}") from exc
+    else:
+        raise ValueError(f"'{ticker}' 현재가 조회에 실패했습니다.")
+
+    if history is None or history.empty:
+        raise ValueError(f"'{ticker}'의 가격 데이터를 찾을 수 없습니다.")
+
+    latest_price = float(history["Close"].dropna().iloc[-1])
+    currency = None
+    try:
+        currency = ticker_obj.fast_info.get("currency")
+    except Exception:  # noqa: BLE001
+        pass
+
+    return {"price": latest_price, "currency": (currency or "USD").upper()}
+
+
 def search_ticker(query: str) -> list[dict]:
     if _is_korean(query):
         return _search_kr_static(query)
