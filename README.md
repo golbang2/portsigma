@@ -51,6 +51,7 @@ Portsigma/
 ## Main Features
 
 - Yahoo Finance historical price loading with autocomplete (Korean stock support)
+- Auto-fill purchase price with latest close price on ticker select (editable, with teal badge indicator)
 - CSV price input for assets not covered by Yahoo Finance (up to 15 assets)
 - Portfolio CSV export and restore
 - Purchase price and quantity tracking
@@ -71,7 +72,15 @@ Portsigma/
   - portfolio-to-target correlation
   - beta
   - hedge ratio
+- **Portfolio optimization** (GARCH-DCC covariance matrix):
+  - Objectives: minimum volatility, maximum Sharpe ratio, efficient frontier
+  - Weight bounds and short-selling toggle
+  - Gurobi QP solver with automatic scipy SLSQP fallback
+  - Dual pie charts: current vs optimal weights
+  - Efficient frontier chart with current portfolio position marked
+- **Risk-free rate**: KOFR via BOK ECOS API (auto-discovers item code), SOFR fallback, hardcoded fallback; source label displayed in UI
 - RAG-based AI hedge strategy recommendation (bring-your-own OpenAI key)
+- Yahoo Finance retry logic for rate limit errors
 - Backend cold-start warmup banner (Render free tier)
 - Rate limiting on all API endpoints
 
@@ -148,6 +157,28 @@ Example payload:
   ]
 }
 ```
+
+### `GET /api/v1/portfolio/ticker-price?ticker=AAPL`
+
+Returns the latest close price and detected currency for a ticker, used to auto-fill the purchase price field in the UI.
+
+### `POST /api/v1/portfolio/optimize`
+
+Runs mean-variance portfolio optimization using a GARCH-DCC covariance matrix.
+
+Key parameters:
+
+- `objective`: `"min_volatility"` | `"max_sharpe"` | `"efficient_frontier"`
+- `allow_short`: boolean
+- `max_weight` / `min_weight`: per-asset weight bounds
+- `risk_free_rate`: annualised rate (auto-fetched from KOFR/SOFR if not supplied)
+- `n_frontier_points`: number of points on the efficient frontier
+
+Response includes optimal weights, expected return/volatility/Sharpe, current portfolio position, frontier points, and solver info (`gurobi` or `scipy`).
+
+### `GET /api/v1/portfolio/risk-free-rate`
+
+Returns the current risk-free rate and its source (`kofr`, `sofr`, or `fallback`).
 
 ### `POST /api/v1/portfolio/risk-strategy`
 
