@@ -78,7 +78,13 @@ def strategy_recommend_endpoint(request: Request, payload: StrategyRecommendRequ
     api_key = payload.openai_api_key or os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise HTTPException(status_code=400, detail="OpenAI API 키가 필요합니다. 키를 입력해주세요.")
+    def safe_stream():
+        try:
+            yield from stream_strategy_recommendation(payload)
+        except Exception as e:
+            yield f"\n\n[오류] {e}"
+
     return StreamingResponse(
-        stream_strategy_recommendation(payload),
+        safe_stream(),
         media_type="text/plain; charset=utf-8",
     )
