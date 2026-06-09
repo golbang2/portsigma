@@ -399,10 +399,14 @@ def analyze_risk_strategy(payload: RiskStrategyRequest) -> RiskStrategyResponse:
     context = build_portfolio_context(payload)
     factor_series = build_factor_series(payload, context)
     factor_returns = factor_series.pct_change().dropna()
-    correlation, beta, hedge_ratio, portfolio_volatility, factor_volatility = calculate_factor_statistics(
+    correlation, beta, hedge_ratio, _, _ = calculate_factor_statistics(
         context.portfolio_returns,
         factor_returns,
     )
+
+    # Use GARCH annualised volatility (same metric shown in the UI)
+    portfolio_volatility = calculate_garch_volatility(context.portfolio_returns)
+    factor_volatility = calculate_garch_volatility(factor_returns)
 
     return RiskStrategyResponse(
         portfolio_name=payload.portfolio_name,
