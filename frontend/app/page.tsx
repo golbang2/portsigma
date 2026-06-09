@@ -188,6 +188,7 @@ export default function HomePage() {
   const [optimizeMinWeight, setOptimizeMinWeight] = useState(0.0);
   const [optimizeAllowShort, setOptimizeAllowShort] = useState(false);
   const [optimizeRfRate, setOptimizeRfRate] = useState(0.026);
+  const [rfRateSource, setRfRateSource] = useState<string | null>(null);
   const [optimizeResult, setOptimizeResult] = useState<OptimizeResponse | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizeError, setOptimizeError] = useState("");
@@ -197,7 +198,12 @@ export default function HomePage() {
 
   useEffect(() => {
     warmupBackend().then(setBackendReady);
-    fetchRiskFreeRate().then((rate) => { if (rate !== null) setOptimizeRfRate(rate); });
+    fetchRiskFreeRate().then((data) => {
+      if (data) {
+        setOptimizeRfRate(data.rate);
+        setRfRateSource(data.source);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -1115,7 +1121,12 @@ export default function HomePage() {
                 </div>
               </label>
               <label className="flex flex-col gap-1.5 text-xs font-medium text-slate-500">
-                {t.optimizeRfRate}
+                <span className="flex items-center gap-1.5">
+                  {t.optimizeRfRate}
+                  {rfRateSource && (
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500">{rfRateSource}</span>
+                  )}
+                </span>
                 <div className="flex items-center gap-2">
                   <input
                     type="range"

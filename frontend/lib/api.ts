@@ -34,12 +34,11 @@ export async function searchTicker(q: string): Promise<TickerSearchResult[] | nu
   }
 }
 
-export async function fetchRiskFreeRate(): Promise<number | null> {
+export async function fetchRiskFreeRate(): Promise<{ rate: number; source: string } | null> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/v1/portfolio/risk-free-rate`);
     if (!response.ok) return null;
-    const data = await response.json() as { rate: number };
-    return data.rate;
+    return response.json() as Promise<{ rate: number; source: string }>;
   } catch {
     return null;
   }

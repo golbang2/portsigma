@@ -1,48 +1,61 @@
 from __future__ import annotations
 
 import os
-import time
+from datetime import date, timedelta
 from functools import lru_cache
 
 import requests
 
-# KOFR fallback: approximate recent rate (updated manually if needed)
-_KOFR_FALLBACK = 0.026  # 2.6%
+_FALLBACK_RATE = 0.026
+_FALLBACK_SOURCE = "고정값 (2.6%)"
 
-# BOK ECOS API — KOFR overnight rate
-# Statistics table: 817Y002, item: 0101000
-_ECOS_URL = "https://ecos.bok.or.kr/api/StatisticSearch/{key}/json/kr/1/1/817Y002/DD/{start}/{end}/0101000"
+_ECOS_URL = (
+    "https://ecos.bok.or.kr/api/StatisticSearch"
+    "/{key}/json/kr/1/1/817Y002/DD/{start}/{end}/0101000"
+)
+# SOFR from FRED public CSV — no API key required
+_SOFR_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=SOFR"
 
 
 @lru_cache(maxsize=1)
-def _fetch_kofr_cached(date_key: str) -> float:
-    """Fetch latest KOFR from BOK ECOS API. Cached per calendar day."""
-    api_key = os.getenv("BOK_API_KEY", "sample")
-    # Request last 30 days to ensure we get a recent observation
-    from datetime import date, timedelta
-    end = date.today()
-    start = end - timedelta(days=30)
-    url = _ECOS_URL.format(
-        key=api_key,
-        start=start.strftime("%Y%m%d"),
-        end=end.strftime("%Y%m%d"),
-    )
+def _fetch_cached(date_key: str) -> tuple[float, str]:
+    """Try BOK KOFR → SOFR(FRED) → fixed fallback. Cached per calendar day."""
+    # --- 1. BOK KOFR ---
+    api_key = os.getenv("BOK_API_KEY")
+    if api_key:
+        try:
+            end = date.today()
+            start = end - timedelta(days=30)
+            url = _ECOS_URL.format(
+                key=api_key,
+                start=start.strftime("%Y%m%d"),
+                end=end.strftime("%Y%m%d"),
+            )
+            resp = requests.get(url, timeout=5)
+            resp.raise_for_status()
+            rows = resp.json().get("StatisticSearch", {}).get("row", [])
+            if rows:
+                return float(rows[-1]["DATA_VALUE"]) / 100.0, "KOFR (BOK)"
+        except Exception:  # noqa: BLE001
+            pass
+
+    # --- 2. SOFR (FRED, no key needed) ---
     try:
-        resp = requests.get(url, timeout=5)
+        resp = requests.get(_SOFR_URL, timeout=5)
         resp.raise_for_status()
-        data = resp.json()
-        rows = data.get("StatisticSearch", {}).get("row", [])
-        if not rows:
-            return _KOFR_FALLBACK
-        # rows are sorted ascending; take the last (most recent) value
-        latest = rows[-1].get("DATA_VALUE", "")
-        return float(latest) / 100.0
+        lines = [l for l in resp.text.strip().splitlines() if not l.startswith("DATE")]
+        if lines:
+            last = lines[-1].split(",")
+            val = last[1].strip()
+            if val and val != ".":
+                return float(val) / 100.0, "SOFR (FRED)"
     except Exception:  # noqa: BLE001
-        return _KOFR_FALLBACK
+        pass
+
+    return _FALLBACK_RATE, _FALLBACK_SOURCE
 
 
-def get_kofr() -> float:
-    """Return the latest annualised KOFR rate (e.g. 0.026 for 2.6%)."""
-    from datetime import date
-    date_key = date.today().isoformat()
-    return _fetch_kofr_cached(date_key)
+def get_risk_free_rate() -> dict:
+    """Return latest risk-free rate with its source label."""
+    rate, source = _fetch_cached(date.today().isoformat())
+    return {"rate": rate, "source": source}
