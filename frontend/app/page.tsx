@@ -1346,7 +1346,7 @@ export default function HomePage() {
                             data={[{
                               x: optimizeResult.current_expected_volatility,
                               y: optimizeResult.current_expected_return,
-                              sharpe: optimizeResult.current_expected_return / (optimizeResult.current_expected_volatility || 1),
+                              sharpe: optimizeResult.current_sharpe_ratio,
                             }]}
                             fill="#f97316"
                             shape="star"

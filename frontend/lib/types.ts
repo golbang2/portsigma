@@ -111,6 +111,7 @@ export type OptimizeResponse = {
   current_weights: Record<string, number>;
   current_expected_return: number;
   current_expected_volatility: number;
+  current_sharpe_ratio: number;
   frontier_points: FrontierPoint[];
   solver: string;
   solver_status: string;

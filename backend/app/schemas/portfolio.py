@@ -133,6 +133,7 @@ class OptimizePortfolioResponse(BaseModel):
     current_weights: dict[str, float]
     current_expected_return: float
     current_expected_volatility: float
+    current_sharpe_ratio: float
     frontier_points: list[FrontierPointSchema]
     solver: str
     solver_status: str

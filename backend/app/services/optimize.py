@@ -87,6 +87,7 @@ def run_portfolio_optimization(payload: OptimizePortfolioRequest) -> OptimizePor
     ])
     cur_ret = float(mu @ w_cur)
     cur_vol = float(np.sqrt(np.clip(w_cur @ cov_matrix @ w_cur, 0.0, None)))
+    cur_sharpe = (cur_ret - payload.risk_free_rate) / cur_vol if cur_vol > 1e-12 else 0.0
 
     frontier_out: list[FrontierPointSchema] = [
         FrontierPointSchema(
@@ -110,6 +111,7 @@ def run_portfolio_optimization(payload: OptimizePortfolioRequest) -> OptimizePor
         current_weights=current_weights,
         current_expected_return=cur_ret,
         current_expected_volatility=cur_vol,
+        current_sharpe_ratio=cur_sharpe,
         frontier_points=frontier_out,
         solver=result.solver,
         solver_status=result.solver_status,
