@@ -335,7 +335,8 @@ def analyze_portfolio(payload: AnalyzePortfolioRequest) -> AnalyzePortfolioRespo
     sharpe_ratio: float | None = None
     if portfolio_vol and var_mean_return is not None:
         annualized_mean = var_mean_return * TRADING_DAYS_PER_YEAR
-        sharpe_ratio = annualized_mean / portfolio_vol
+        rf = 0.0251
+        sharpe_ratio = (annualized_mean - rf) / portfolio_vol
 
     drawdown_series, max_drawdown = build_drawdown_series(context.portfolio_returns)
     context.asset_frame["garch_volatility"] = context.asset_frame["asset"].map(garch_vol)
