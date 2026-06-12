@@ -22,6 +22,10 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
   const [searchError, setSearchError] = useState(false);
   const [isFetchingPrice, setIsFetchingPrice] = useState(false);
   const [priceAutofilled, setPriceAutofilled] = useState(false);
+  const formatNumber = (n: number) =>
+    n ? n.toLocaleString("en-US", { maximumFractionDigits: 10 }) : "";
+  const [priceDisplay, setPriceDisplay] = useState(() => formatNumber(asset.purchase_price));
+  const [quantityDisplay, setQuantityDisplay] = useState(() => formatNumber(asset.quantity));
   const containerRef = useRef<HTMLDivElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -98,6 +102,7 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
         purchase_price: data.price,
         purchase_currency: data.currency,
       });
+      setPriceDisplay(data.price.toLocaleString("en-US", { maximumFractionDigits: 10 }));
       setPriceAutofilled(true);
     }
   }
@@ -200,13 +205,20 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
           </div>
           <div className="grid grid-cols-[1fr_92px] gap-2">
             <input
-              type="number"
-              min="0"
-              step="0.0001"
-              value={asset.purchase_price}
+              type="text"
+              inputMode="decimal"
+              value={priceDisplay}
               onChange={(event) => {
-                setPriceAutofilled(false);
-                onChange({ ...asset, purchase_price: Number(event.target.value) });
+                const raw = event.target.value.replace(/,/g, "");
+                if (raw === "" || /^[0-9]*\.?[0-9]*$/.test(raw)) {
+                  const parts = raw.split(".");
+                  const formatted =
+                    Number(parts[0]).toLocaleString("en-US") +
+                    (parts.length > 1 ? "." + parts[1] : "");
+                  setPriceDisplay(raw === "" ? "" : formatted);
+                  setPriceAutofilled(false);
+                  onChange({ ...asset, purchase_price: raw === "" ? 0 : Number(raw) });
+                }
               }}
               className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-ember"
             />
@@ -227,11 +239,20 @@ export function AssetEditor({ asset, index, hideCsv = false, onChange, onRemove 
         <label className="flex flex-col gap-2 text-sm text-slate-700">
           {t.quantity}
           <input
-            type="number"
-            min="0"
-            step="0.0001"
-            value={asset.quantity}
-            onChange={(event) => onChange({ ...asset, quantity: Number(event.target.value) })}
+            type="text"
+            inputMode="decimal"
+            value={quantityDisplay}
+            onChange={(event) => {
+              const raw = event.target.value.replace(/,/g, "");
+              if (raw === "" || /^[0-9]*\.?[0-9]*$/.test(raw)) {
+                const parts = raw.split(".");
+                const formatted =
+                  Number(parts[0]).toLocaleString("en-US") +
+                  (parts.length > 1 ? "." + parts[1] : "");
+                setQuantityDisplay(raw === "" ? "" : formatted);
+                onChange({ ...asset, quantity: raw === "" ? 0 : Number(raw) });
+              }
+            }}
             className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-ember"
           />
         </label>
